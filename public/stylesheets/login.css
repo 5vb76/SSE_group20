@@ -1,0 +1,60 @@
+:root{
+  --bg:#0b1020;--card:#151b2b;--text:#e9ecf1;--muted:#9aa3b2;
+  --accent:#7c9cff;--accent-2:#58d6a6;--danger:#ff7676;--border:#232a3d;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;display:grid;place-items:center;background:radial-gradient(1000px 600px at 80% -10%, #1f2a44 0%, transparent 60%),var(--bg);
+  color:var(--text);font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Arial;
+}
+.container {
+  display: flex;
+  justify-content: center;   
+  align-items: center;       
+  height: 100vh;
+  background: #0b1020;       
+}
+.card{
+  width:min(92vw,420px);
+  background:linear-gradient(180deg,rgba(124,156,255,.08),transparent 40%),var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);padding:28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter:blur(4px)
+}
+.title{margin:0 0 8px;font-size:22px;font-weight:700}
+.subtitle{margin:0 0 24px;color:var(--muted);font-size:14px}
+.field{margin-bottom:16px}
+.label{
+    display:block;
+    margin-bottom:8px;
+    font-size:14px;
+    color:var(--muted)}
+.input-wrap{
+    position:relative;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#0f1425
+}
+input[type="email"],input[type="password"],input[type="text"]{
+  width:100%;padding:12px 44px 12px 12px;border:0;outline:none;color:var(--text);background:transparent;font-size:15px
+}
+.toggle{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  background:#1a2236;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer
+}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 18px}
+.row a{color:var(--accent);text-decoration:none;font-size:14px}
+.row a:hover{text-decoration:underline}
+.btn{
+  width:100%;padding:12px 16px;border:0;border-radius:10px;
+  background:linear-gradient(180deg,var(--accent) 0%,#5f83ff 100%);
+  color:#fff;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s ease,transform .05s ease
+}
+.btn:disabled{filter:grayscale(.5) brightness(.8);cursor:not-allowed}
+.hint{margin-top:12px;min-height:18px;font-size:13px;color:var(--muted)}
+.hint.error{color:var(--danger)}
+.hint.success{color:var(--accent-2)}
