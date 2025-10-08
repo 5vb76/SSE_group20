@@ -4,10 +4,13 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-const db = require('./database/db');
+const pool = require('./database/db');
 
 var indexRouter = require('./routes/index');
+var loginRouter = require('./routes/login');
+var ploginRouter = require('./routes/Plogin');
 var usersRouter = require('./routes/users');
+var signupRouter = require('./routes/signup');
 
 var app = express();
 
@@ -21,8 +24,17 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use((req, res, next) => {
+  req.pool = pool; 
+  next();
+});
+
+
 app.use('/', indexRouter);
+app.use('/login', loginRouter);
 app.use('/users', usersRouter);
+app.use('/Plogin', ploginRouter);
+app.use('/signup', signupRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -37,19 +49,19 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.render('error', { title: 'Error Page' });
 });
 
-app.get('/users', (req, res) => {
-  db.all('SELECT * FROM users', [], (err, rows) => {
-    if (err) {
-      console.error(err.message);
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json(rows);
-    }
-  });
-});
+// app.get('/users', (req, res) => {
+//   db.all('SELECT * FROM users', [], (err, rows) => {
+//     if (err) {
+//       console.error(err.message);
+//       res.status(500).json({ error: err.message });
+//     } else {
+//       res.json(rows);
+//     }
+//   });
+// });
 
 
 module.exports = app;

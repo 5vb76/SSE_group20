@@ -38,7 +38,7 @@ var vueinst = new Vue({
                     alert("Login failed: " + data.message);
                 }               
             };
-            xhttp.open("POST", "/login/login.ajax", true);
+            xhttp.open("POST", "/Plogin/login.ajax", true);
             xhttp.setRequestHeader("Content-type", "application/json");
             xhttp.send(JSON.stringify({ username: this.username, password: this.password, remember: this.remember }));
         },
@@ -79,7 +79,7 @@ var vueinst = new Vue({
                     alert("No such Account, Please try again");
                 }               
             };
-            xhttp.open("POST", "/login/forget.ajax", true);
+            xhttp.open("POST", "/Plogin/forget.ajax", true);
             xhttp.setRequestHeader("Content-type", "application/json");
             xhttp.send(JSON.stringify({ username: this.resetEmail}));
         },
@@ -102,7 +102,7 @@ var vueinst = new Vue({
                     alert("ResetCode cannot be empty");
                 }              
             };
-            xhttp.open("POST", "/login/varify_forget.ajax", true);
+            xhttp.open("POST", "/Plogin/varify_forget.ajax", true);
             xhttp.setRequestHeader("Content-type", "application/json");
             xhttp.send(JSON.stringify({ username: this.resetEmail, resetCode: this.resetCode}) );
         },
@@ -120,7 +120,7 @@ var vueinst = new Vue({
                     console.log("Done!");
                 }            
             };
-            xhttp.open("POST", "/login/ChangePass.ajax", true);
+            xhttp.open("POST", "/Plogin/ChangePass.ajax", true);
             xhttp.setRequestHeader("Content-type", "application/json");
             xhttp.send(JSON.stringify({ email: this.resetEmail, new_password: this.new_password}) );
         }

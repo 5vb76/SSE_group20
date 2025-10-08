@@ -8,25 +8,60 @@ DROP TABLE IF EXISTS users_covid_status;
 DROP TABLE IF EXISTS payment;
 DROP TABLE IF EXISTS product;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS Email_History;
+DROP TABLE IF EXISTS P_Email_History;
+DROP TABLE IF EXISTS Reset_History;
+DROP TABLE IF EXISTS P_Reset_History;
 
 CREATE TABLE users (
   user_id        BIGINT        NOT NULL AUTO_INCREMENT,
   name           VARCHAR(100)  NOT NULL,
-  user_type      ENUM('customer','admin') NOT NULL DEFAULT 'customer',
+  user_type      ENUM('pending','customer','admin') NOT NULL DEFAULT 'customer',
   email          VARCHAR(255)  NOT NULL UNIQUE,
   password_hash  VARCHAR(255)  NOT NULL,
   created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE Email_History (
+  id            BIGINT        NOT NULL AUTO_INCREMENT,
+  user_id       BIGINT        NOT NULL,
+  email_code    VARCHAR(10)   NOT NULL DEFAULT '',
+  description   VARCHAR(255)  NOT NULL DEFAULT '',
+  email_type    ENUM('registration','password_reset','notice') NOT NULL,
+  created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_rh_user (user_id),
+  CONSTRAINT fk_rh_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE provider (
   user_id        BIGINT        NOT NULL AUTO_INCREMENT,
   name           VARCHAR(100)  NOT NULL,
   address        VARCHAR(255)  NOT NULL,
+  user_type      ENUM('pending','provider') NOT NULL DEFAULT 'provider',
   email          VARCHAR(255)  NOT NULL UNIQUE,
   password_hash  VARCHAR(255)  NOT NULL,
   created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE P_Email_History (
+  id      BIGINT        NOT NULL AUTO_INCREMENT,
+  provider_id   BIGINT        NOT NULL,
+  email_code    VARCHAR(10)   NOT NULL DEFAULT '',
+  description   VARCHAR(255)  NOT NULL DEFAULT '',
+  email_type    ENUM('registration','password_reset','notice') NOT NULL,
+  created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+
+  KEY idx_prh_provider (provider_id),
+  CONSTRAINT fk_prh_provider
+    FOREIGN KEY (provider_id)
+    REFERENCES provider(user_id)
+    ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE users_covid_status (
