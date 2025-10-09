@@ -38,7 +38,7 @@ Follow the Makefile to setup environment and database.
 ### 1. Setup environment
 Use command
 ```
-make init
+make setup
 ```
 ### 2. Initialize all database
 Use Command
