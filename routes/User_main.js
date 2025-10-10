@@ -70,8 +70,9 @@ router.get('/getProvider.ajax', function(req, res) {
                             provider_id,
                             JSON_ARRAYAGG(
                             JSON_OBJECT(
+                                'id', product_id,
                                 'name',  name,
-                                'price', price,     -- DECIMAL 保持为数值
+                                'price', price,     
                                 'status', status
                             )
                             ) AS products
@@ -96,7 +97,369 @@ router.get('/getProvider.ajax', function(req, res) {
 
 });
 
+router.get('/getuserinfo.ajax', function(req, res) {
+    //console.log('req.pool is', !!req.pool);
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'SELECT * FROM users WHERE user_id = ?';
+        connection.query(query, userId, function(error, results) {
+            //connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (!results || results.length == 0) {
+                return res.status(404).json({ success: false, message: 'User not found.' });
+            }
+            //find user address info (only one address for now)
+            const addressQuery = 'SELECT * FROM user_address WHERE user_id = ? order by id desc';
+            connection.query(addressQuery, userId, function(error, addressResults) {
+                connection.release();
+                if (error) {
+                    console.log(error);
+                    return res.sendStatus(500);
+                }
+                if (addressResults && addressResults.length > 0) {
+                    res.status(200).json({ success: true, user: results[0], address: addressResults });
+                }
+                else {
+                    res.status(200).json({ success: true, user: results[0], address: null });
+                }
+            });
+        });
+    });
+});
+
+router.post('/email_change', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { address_id, address, city, state, postcode } = req.body;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'UPDATE user_address SET address = ?, city = ?, state = ?, postcode = ? WHERE id = ? AND user_id = ?';
+        connection.query(query, [address, city, state, postcode, address_id, userId], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'Address not found or not authorized.' });
+            }
+            return res.status(200).json({ success: true, message: 'Address updated successfully.' });
+        });
+    });
+});
+
+router.post('/username_change', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { username } = req.body;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'UPDATE users SET name = ? WHERE user_id = ?';
+        connection.query(query, [username, userId], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'User not found or not authorized.' });
+            }
+            return res.status(200).json({ success: true, message: 'Username updated successfully.' });
+        });
+    });
+});
+
+router.get('/getemailcode', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const user_email = req.session.user.email;
+    console.log('Requesting email code for user:', userId, user_email);
+    const resetCode = generateResetCode();
+                // todo: integrate email service to send the reset code to user's email
+    const mailinfo = {
+                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
+                    to: user_email,
+                    subject: 'Password Reset Code',
+                    text: `Your password reset code is: ${resetCode}. It is valid for 15 minutes.`,
+                    html: `<h2>Your password reset code is: <b>${resetCode}</b>. It is valid for 15 minutes.</h2>`
+    };
+    transporter.sendMail(mailinfo, (error, info) => {
+        if (error) {
+            console.log('Error sending email:', error);
+            return res.status(500).json({ success: false, message: 'Failed to send email.' });
+        }
+    });
+    // Store reset code in database
+    var email_type = "password_reset";
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const InsertQuery = 'Insert into Email_History (user_id, email_code, email_type) values (?, ?, ?)';
+        connection.query(InsertQuery, [userId, resetCode, email_type], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            console.log('Reset code stored:', resetCode);
+            return res.status(200).json({ success: true, message: 'Verification code sent to your email.' });
+        });
+    });
+
+});
+
+router.post('/password_change', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { password, email_code } = req.body;
+    if (!validatePassword(password)) {
+        return res.status(400).json({ success: false, message: 'Password does not meet criteria.' });
+    }
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const codeQuery = `
+            SELECT * FROM Email_History 
+            WHERE user_id = ? 
+              AND email_code = ? 
+              AND email_type = ? 
+              AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) <= 15
+            ORDER BY id DESC LIMIT 1
+        `;
+        connection.query(codeQuery, [userId, email_code, 'password_reset'], function(error, results) {
+            if (error) {
+                connection.release();
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (!results || results.length == 0) {
+                connection.release();
+                return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
+            }
+            // If code is valid, proceed to update the password
+            const updateQuery = 'UPDATE users SET password_hash = ? WHERE user_id = ?';
+            connection.query(updateQuery, [sha256(password), userId], function(error, results) {
+                connection.release();
+                if (error) {
+                    console.log(error);
+                    return res.sendStatus(500);
+                }
+                return res.status(200).json({ success: true, message: 'Password updated successfully.' });
+            });
+        });
+    });
+});
 
 
+router.get('/get_user_history', function(req, res){
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = `SELECT
+                        ds.service_id,
+                        ds.order_timestamp,
+                        ds.description AS delivery_description,
+                        ds.order_status,
+                        ds.order_covid_status,
+                        ds.pickup_address,
+                        ds.dropoff_address,
+
+                        p.user_id AS provider_id,
+                        p.name AS provider_name,
+                        p.email AS provider_email,
+                        p.description AS provider_description,
+
+                        pay.payment_id,
+                        pay.payment_method,
+                        pay.payment_status,
+                        pay.amount,
+
+                        oi.order_item_id,
+                        oi.quantity,
+
+                        prod.product_id,
+                        prod.name AS product_name,
+                        prod.price,
+                        prod.status AS product_status
+
+                        FROM delivery_service ds
+                        JOIN provider p ON ds.provider_id = p.user_id
+                        LEFT JOIN payment pay ON ds.payment_id = pay.payment_id
+                        JOIN order_items oi ON ds.service_id = oi.service_id
+                        JOIN product prod ON oi.product_id = prod.product_id
+                        WHERE ds.customer_id = ? 
+                        ORDER BY ds.order_timestamp DESC, ds.service_id, oi.order_item_id;`;
+        connection.query(query, [userId], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (!results || results.length == 0) {
+                return res.status(404).json({ success: false, message: 'No history found.' });
+            }
+            // If history found, return it
+            return res.status(200).json({ success: true, history: results });
+        });
+    });
+});
+
+router.post('/add_address', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { address, city, state, postcode } = req.body;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'INSERT INTO user_address (user_id, address, city, state, postcode) VALUES (?, ?, ?, ?, ?)';
+        connection.query(query, [userId, address, city, state, postcode], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            return res.status(200).json({ success: true, message: 'Address added successfully.' });
+        });
+    });
+});
+
+router.post('/delete_address', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { address_id } = req.body;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'DELETE FROM user_address WHERE id = ? AND user_id = ?';
+        connection.query(query, [address_id, userId], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            return res.status(200).json({ success: true, message: 'Address deleted successfully.' });
+        });
+    });
+});
+
+router.post('/checkout', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const { provider_id, cart, payment_method, dropoff_address, amount, user_id } = req.body;
+    var provider_address = '';
+    var payment_id = 0;
+    const description = 'Order from user ' + req.session.user.name;
+
+
+    if (!provider_id || !cart || cart.length === 0 || !payment_method || !dropoff_address || !amount) {
+        return res.status(400).json({ success: false, message: 'Missing required fields.' });
+    }
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        // Start transaction
+        connection.beginTransaction(function(err) {
+            if (err) {
+                connection.release();
+                console.log(err);
+                return res.sendStatus(500);
+            }
+            const insertPaymentQuery = 'INSERT INTO payment (payment_method, payment_status, amount) VALUES (?, ?, ?)';
+            connection.query(insertPaymentQuery, [payment_method, 'pending', amount], function(error, paymentResults) {
+                if (error) {
+                    console.log(error);
+                    return res.sendStatus(500);
+                }
+                payment_id = paymentResults.insertId;
+
+                const findProviderQuery = 'SELECT * FROM provider_address WHERE provider_id = ? order by id desc limit 1';
+                connection.query(findProviderQuery, [provider_id], function(error, providerResults) {
+                    if (error) {
+                        console.log(error);
+                        return res.sendStatus(500);
+                    }
+                    if (!providerResults || providerResults.length === 0) {
+                        return connection.rollback(function() {
+                            connection.release();
+                            return res.status(400).json({ success: false, message: 'Invalid provider ID.' });
+                        });
+                    }
+                    provider_address = providerResults[0].address;
+
+
+                    const insertServiceQuery = `INSERT INTO delivery_service 
+                        (provider_id, customer_id, payment_id, order_timestamp, description, order_status, order_covid_status, pickup_address, dropoff_address) 
+                        VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)`;
+                    connection.query(insertServiceQuery, [provider_id, user_id, payment_id, description, 'ongoing', 'Green', provider_address, dropoff_address], function(error, serviceResults) {
+                        if (error) {
+                            console.log(error);
+                            return res.sendStatus(500);
+                        }
+                        // add to order_items
+                        const service_id = serviceResults.insertId;
+                        console.log('Service ID:', service_id);
+                        const insertOrderItemsQuery = 'INSERT INTO order_items (service_id, product_id, quantity) VALUES ?';
+                        const orderItemsData = cart.map(item => [service_id, item.id, item.qty]);
+                        connection.query(insertOrderItemsQuery, [orderItemsData], function(error, orderItemsResults) {
+                            if (error) {
+                                console.log(error);
+                                return res.sendStatus(500);
+                            }
+                            res.status(200).json({ success: true, message: 'Checkout successful.' });
+
+                    });
+                });
+            });
+        });
+    });
+    });
+
+               
+});
 
 module.exports = router;

@@ -24,7 +24,11 @@ router.get('/', function(req, res, next) {
 
 router.get('/checkloginstatus.ajax', function(req, res, next) {
   if (!req.session.user) return res.sendStatus(401);
-  console.log('Checking login status');
+  if (req.session.user.user_type !== 'customer'){
+    console.log(req.session.user.user_type);
+    res.destroy('sid');
+    return res.sendStatus(403);
+  }
   return res.status(200).json({ success:true, user: req.session.user, message: 'You are logged in.'});
 });
 
@@ -44,15 +48,21 @@ router.post('/login.ajax', function(req, res) {
         }
         const query = 'SELECT * FROM users WHERE email = ?';
         connection.query(query, username, function(error, results) {
-            connection.release();
+            //connection.release();
             if(!results || results.length == 0){
                 return res.status(401).json({ success: false, message: 'Invalid username or password.' });        
             }
             const password_hash = results[0].password_hash;
             if(sha256(password) == password_hash){
-                // Passwords match  
-                    req.session.user = { id: results[0].user_id, name: results[0].name, email: results[0].email, user_type: results[0].user_type };
-                    req.session.username = username;
+                const covid_query = 'SELECT state_name FROM users_covid_status WHERE user_id = ? ORDER BY id DESC LIMIT 1;';
+                connection.query(covid_query, results[0].user_id, function(error, covid_results) {
+                    connection.release();
+                    if (error) {
+                        console.log(error);
+                        return res.sendStatus(500);
+                    }
+
+                    req.session.user = { id: results[0].user_id, name: results[0].name, email: results[0].email, user_type: results[0].user_type, covid_status: covid_results[0].state_name};
                     req.session.isLoggedIn = true
                     if (remember) {
                         req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -61,7 +71,11 @@ router.post('/login.ajax', function(req, res) {
                         req.session.cookie.maxAge = 1 * 60 * 60 * 1000; // 1 hour
                     }
                 return res.status(200).json({ success: true, message: 'Login successful.', user: req.session.user });
+
+                });
+
             } else {
+                connection.release();
                 // Passwords don't match
                 return res.status(401).json({ success: false, message: 'Invalid username or password.' });
             }

@@ -188,7 +188,7 @@ router.post('/p_email_varify.ajax', function(req, res) {
                     }
                 });
 
-        const iquery = "INSERT INTO provider (name, email, password_hash, address, user_type) VALUES (?, ?, ?, ?, 'pending')";
+        const iquery = "INSERT INTO provider (name, email, password_hash, user_type) VALUES (?, ?, ?, ?)";
         connection.query(iquery, ['pending', email, 'pending', 'pending'], function(error, results) {
             if (error) {
                 console.log(error);
@@ -219,7 +219,12 @@ router.post('/Pregister.ajax', function(req, res){
     var email = req.body.provider_email;
     var password = req.body.provider_password;
     var varifyEmailCode = req.body.provider_varifyEmailCode;
+
     var address = req.body.provider_address;
+    var city = req.body.provider_city;
+    var state = req.body.provider_state;
+    var postcode = req.body.provider_postcode;
+
     console.log('req.pool is', !!req.pool);
     if(username == '' || email == '' || password == '' || varifyEmailCode == '' || address == ''){
         return res.status(401).json({ success: false, message: 'All fields are required.' });
@@ -246,13 +251,23 @@ router.post('/Pregister.ajax', function(req, res){
             else if(results[0].email_code == varifyEmailCode){
                 //update the user info
                 var password_hash = sha256(password);
-                const uquery = "UPDATE provider SET name = ?, password_hash = ?, address = ?, user_type = 'provider' WHERE email = ?";
-                connection.query(uquery, [username, password_hash, address, email], function(error, results) {
-                    connection.release();
+                const uquery = "UPDATE provider SET name = ?, password_hash = ?, user_type = 'provider' WHERE email = ?";
+                connection.query(uquery, [username, password_hash, email], function(error, results) {
+                    //connection.release();
                     if (error) {
                         console.log(error);
                         return res.status(502).json({ success: false, message: 'Database update error.' });
                     }
+
+                    //add to provider address table
+                    const aquery = "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES ((SELECT user_id FROM provider WHERE email = ?), ?, ?, ?, ?)";
+                    connection.query(aquery, [email, address, city, state, postcode], function(error, results) {
+                        connection.release();
+                            if (error) {
+                                console.log(error);
+                                return res.status(504).json({ success: false, message: 'Database insert error.' });
+                            }
+                    });
                     return res.status(200).json({ success: true, message: 'Registration successful.', redirectUrl: '/provider_login.html' });
                 });
             }

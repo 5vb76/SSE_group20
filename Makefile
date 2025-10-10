@@ -10,7 +10,7 @@ setup:
 	@npm install nodemailer mysql2
 	@npm install
 	@npm install -g express-generator
-	@npm i express mysql2 express-session express-mysql-session cors crypto
+	@npm i express mysql2 express-session express-mysql-session crypto
 	@echo "Setup completed successfully!"
 
 init:

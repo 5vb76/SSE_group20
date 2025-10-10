@@ -64,7 +64,6 @@ body{
 }
 .site-title{
   font-weight:800; font-size:22px; letter-spacing:0.5px;
-  text-transform:lowercase;
 }
 .top-actions{display:flex; align-items:center; gap:12px}
 .search{
@@ -83,6 +82,17 @@ body{
 
 /* 商家卡片 */
 /* 紧凑网格：默认 3 列，超大屏 4 列，平板 2 列，手机 1 列 */
+.profile{
+  gap:16px;
+}
+.profile-desc{ line-height:1.5; }
+.items li{ padding:8px 10px; }
+.profile-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px
+}
+.profile-name{margin:0; font-size:18px}
+.profile-desc{margin: 0.4em;; color:var(--muted); line-height:1.6}
+
 .merchant-grid{
   display:grid;
   grid-template-columns: repeat(12, 1fr);
@@ -135,7 +145,20 @@ body{
   background:#1a2236; color:var(--muted)
 }
 .status-pill.Green{background:rgba(88,214,166,.12); color:var(--accent-2); border-color:rgba(88,214,166,.35)}
-.status-pill.Ted{background:rgba(255,118,118,.12); color:var(--danger); border-color:rgba(255,118,118,.35)}
+.status-pill.Red{background:rgba(255,118,118,.12); color:var(--danger); border-color:rgba(255,118,118,.35)}
 .status-pill.Yellow{background:rgba(255,183,77,.12); color:#ffb94d; border-color:rgba(255,183,77,.35)}
 
 .merchant-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:4px}
+
+.input-wrap{ position:relative; border:1px solid var(--border); border-radius:10px; background:#d0d6e7 }
+
+.inline-input{
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #dae0f3;
+  color: #0a1b53;
+  outline: none;
+  font-size: 14px;
+}
