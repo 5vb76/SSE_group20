@@ -12,7 +12,26 @@ var vueinst = new Vue({
         new_password: '',
         confirm_password: '',
     },
+    created: function () {
+        this.checkLoginStatus();
+    },
     methods: {
+        checkLoginStatus(){
+            var ptr = this;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200){
+                    const data = JSON.parse(xhttp.responseText);
+                    if(data.success === true){
+                        console.log("User is logged in");
+                        window.location.href = '/User_mainpage.html';
+                    }
+                }           
+            };
+            xhttp.open("GET", "/login/checkloginstatus.ajax", true);
+            xhttp.setRequestHeader("Content-type", "application/json");
+            xhttp.send();
+        },
         clearinput(){
             this.username = '';
             this.password = '';
@@ -31,7 +50,8 @@ var vueinst = new Vue({
             xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200){
                     const data = JSON.parse(xhttp.responseText);
-                    alert("Login successful: " + data.message);
+                    console.log("Login successful: " + data.message);
+                    window.location.href = '/User_mainpage.html';
                 }
                 else if(this.readyState == 4 && this.status == 401){
                     const data = JSON.parse(xhttp.responseText);

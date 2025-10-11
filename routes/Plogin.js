@@ -1,4 +1,5 @@
 var express = require('express');
+const transporter = require('./mailtest');
 var router = express.Router();
 
 const crypto = require('crypto');
@@ -78,6 +79,22 @@ router.post('/forget.ajax', function(req, res){
             } else {
                 // Send reset email here
                 const resetCode = generateResetCode();
+
+                const mailinfo = {
+                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
+                    to: username,
+                    subject: 'Password Reset Code',
+                    text: `Your password reset code is: ${resetCode}. It is valid for 15 minutes.`,
+                    html: `<p>Your password reset code is: <b>${resetCode}</b>. It is valid for 15 minutes.</p>`
+                };
+
+                transporter.sendMail(mailinfo, (error, info) => {
+                    if (error) {
+                        console.log('Error sending email:', error);
+                        return res.sendStatus(500);
+                    }
+                });
+
                 // Store reset code in database
                 var email_type = "password_reset";
                 const InsertQuery = 'Insert into P_Email_History (provider_id, email_code, email_type) values (?, ?, ?)';

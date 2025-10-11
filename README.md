@@ -45,6 +45,27 @@ npm -v
 2. Set root Password
 3. Launch MySql server.
 
+# 10/10 UPDATE: IMPORTANT
+Follow the Makefile to setup environment and database.
+### 1. Setup environment
+Use command
+```
+make setup
+```
+### 2. Initialize all database
+Use Command
+```
+make init
+```
+
+### 3. Initialize database data / Reset data (Really useful)
+Use command
+```
+make db
+```
+
+# OLD GUIDE (You can skip the rest..)
+
 ## 2. Initialization
 ### Initialise Database
 Using command to import database.

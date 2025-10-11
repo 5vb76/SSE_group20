@@ -10,9 +10,9 @@ const pool = mysql.createPool({
 
 pool.getConnection(function(err, connection) {
   if (err) {
-    console.error('db connection FAILED!', err.message);
+    console.error('Service db connection FAILED!', err.message);
   } else {
-    console.log('db connection SUCCESS!');
+    console.log('Service db connection SUCCESS!');
     connection.release();
   }
 });

@@ -1,4 +1,5 @@
 var express = require('express');
+const transporter = require('./mailtest');
 var router = express.Router();
 
 const crypto = require('crypto');
@@ -52,7 +53,20 @@ router.post('/c_email_varify.ajax', function(req, res) {
                 var emailcode = generateResetCode();
                 //todo: send email code to the email address
 
+                const mailinfo = {
+                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
+                    to: email,
+                    subject: 'New Account Register Code',
+                    text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
+                    html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`
+                };
 
+                transporter.sendMail(mailinfo, (error, info) => {
+                    if (error) {
+                        console.log('Error sending email:', error);
+                        return res.sendStatus(500);
+                    }
+                });
 
                 //insert a new user with pending status
                 const iquery = "INSERT INTO users (name, email, password_hash, user_type) VALUES (?, ?, ?, 'pending')";
@@ -117,11 +131,21 @@ router.post('/Cregister.ajax', function(req, res){
                 var password_hash = sha256(password);
                 const uquery = "UPDATE users SET name = ?, password_hash = ?, user_type = 'customer' WHERE email = ?";
                 connection.query(uquery, [username, password_hash, email], function(error, results) {
-                    connection.release();
+                    //connection.release();
                     if (error) {
                         console.log(error);
                         return res.status(502).json({ success: false, message: 'Database update error.' });
                     }
+                    //add to users_covid_status table with default green status
+                    const cquery = "INSERT INTO users_covid_status (user_id, state_name) VALUES ((SELECT user_id FROM users WHERE email = ?), 'Green')";
+                    connection.query(cquery, [email], function(error, results) {
+                        connection.release();
+                            if (error) {
+                                console.log(error);
+                                return res.status(504).json({ success: false, message: 'Database insert error.' });
+                            }
+                    });
+
                     return res.status(200).json({ success: true, message: 'Registration successful.' });
                 });
             }
@@ -158,7 +182,23 @@ router.post('/p_email_varify.ajax', function(req, res) {
 
                 //means new email
         var emailcode = generateResetCode();
-        const iquery = "INSERT INTO provider (name, email, password_hash, address, user_type) VALUES (?, ?, ?, ?, 'pending')";
+
+        const mailinfo = {
+                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
+                    to: email,
+                    subject: 'New Account Register Code',
+                    text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
+                    html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`
+                };
+
+                transporter.sendMail(mailinfo, (error, info) => {
+                    if (error) {
+                        console.log('Error sending email:', error);
+                        return res.sendStatus(500);
+                    }
+                });
+
+        const iquery = "INSERT INTO provider (name, email, password_hash, user_type) VALUES (?, ?, ?, ?)";
         connection.query(iquery, ['pending', email, 'pending', 'pending'], function(error, results) {
             if (error) {
                 console.log(error);
@@ -189,7 +229,12 @@ router.post('/Pregister.ajax', function(req, res){
     var email = req.body.provider_email;
     var password = req.body.provider_password;
     var varifyEmailCode = req.body.provider_varifyEmailCode;
+
     var address = req.body.provider_address;
+    var city = req.body.provider_city;
+    var state = req.body.provider_state;
+    var postcode = req.body.provider_postcode;
+
     console.log('req.pool is', !!req.pool);
     if(username == '' || email == '' || password == '' || varifyEmailCode == '' || address == ''){
         return res.status(401).json({ success: false, message: 'All fields are required.' });
@@ -216,13 +261,32 @@ router.post('/Pregister.ajax', function(req, res){
             else if(results[0].email_code == varifyEmailCode){
                 //update the user info
                 var password_hash = sha256(password);
-                const uquery = "UPDATE provider SET name = ?, password_hash = ?, address = ?, user_type = 'provider' WHERE email = ?";
-                connection.query(uquery, [username, password_hash, address, email], function(error, results) {
-                    connection.release();
+                const uquery = "UPDATE provider SET name = ?, password_hash = ?, user_type = 'provider' WHERE email = ?";
+                connection.query(uquery, [username, password_hash, email], function(error, results) {
+                    //connection.release();
                     if (error) {
                         console.log(error);
                         return res.status(502).json({ success: false, message: 'Database update error.' });
                     }
+
+                    //add to provider address table
+                    const aquery = "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES ((SELECT user_id FROM provider WHERE email = ?), ?, ?, ?, ?)";
+                    connection.query(aquery, [email, address, city, state, postcode], function(error, results) {
+                        //connection.release();
+                            if (error) {
+                                console.log(error);
+                                return res.status(504).json({ success: false, message: 'Database insert error.' });
+                            }
+                            //add to users_covid_status table with default green status
+                            const cquery = "INSERT INTO providers_covid_status (provider_id, state_name) VALUES ((SELECT user_id FROM provider WHERE email = ?), 'Green')";
+                            connection.query(cquery, [email], function(error, results) {
+                                connection.release();
+                                if (error) {
+                                    console.log(error);
+                                    return res.status(504).json({ success: false, message: 'Database insert error.' });
+                                }
+                            });
+                    });
                     return res.status(200).json({ success: true, message: 'Registration successful.', redirectUrl: '/provider_login.html' });
                 });
             }

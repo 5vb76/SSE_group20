@@ -1,7 +1,9 @@
 var express = require('express');
+const transporter = require('./mailtest');
 var router = express.Router();
 
 const crypto = require('crypto');
+const e = require('express');
 
 function sha256(text) {
   return crypto.createHash('sha256').update(text).digest('hex');
@@ -20,6 +22,16 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'login' });
 });
 
+router.get('/checkloginstatus.ajax', function(req, res, next) {
+  if (!req.session.user) return res.sendStatus(401);
+  if (req.session.user.user_type !== 'customer' && req.session.user.user_type !== 'admin') {
+    console.log(req.session.user.user_type);
+    res.destroy('sid');
+    return res.sendStatus(403);
+  }
+  return res.status(200).json({ success:true, user: req.session.user, message: 'You are logged in.'});
+});
+
 router.post('/login.ajax', function(req, res) {
   console.log('req.pool is', !!req.pool);
   var username = req.body.username;
@@ -34,22 +46,36 @@ router.post('/login.ajax', function(req, res) {
             console.log(error);
             return res.sendStatus(500);
         }
-        const query = 'SELECT password_hash FROM users WHERE email = ?';
+        const query = 'SELECT * FROM users WHERE email = ?';
         connection.query(query, username, function(error, results) {
-            connection.release();
+            //connection.release();
             if(!results || results.length == 0){
                 return res.status(401).json({ success: false, message: 'Invalid username or password.' });        
             }
             const password_hash = results[0].password_hash;
             if(sha256(password) == password_hash){
-                // Passwords match  
-                if (remember) {
-                    req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 1 days
-                    req.session.username = username;
+                const covid_query = 'SELECT state_name FROM users_covid_status WHERE user_id = ? ORDER BY id DESC LIMIT 1;';
+                connection.query(covid_query, results[0].user_id, function(error, covid_results) {
+                    connection.release();
+                    if (error) {
+                        console.log(error);
+                        return res.sendStatus(500);
+                    }
+
+                    req.session.user = { id: results[0].user_id, name: results[0].name, email: results[0].email, user_type: results[0].user_type, covid_status: covid_results[0].state_name};
                     req.session.isLoggedIn = true
-                }
-                return res.status(200).json({ success: true, message: 'Login successful.' });
+                    if (remember) {
+                        req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+                    }
+                    else {
+                        req.session.cookie.maxAge = 1 * 60 * 60 * 1000; // 1 hour
+                    }
+                return res.status(200).json({ success: true, message: 'Login successful.', user: req.session.user });
+
+                });
+
             } else {
+                connection.release();
                 // Passwords don't match
                 return res.status(401).json({ success: false, message: 'Invalid username or password.' });
             }
@@ -78,7 +104,20 @@ router.post('/forget.ajax', function(req, res){
                 // Send reset email here
                 const resetCode = generateResetCode();
                 // todo: integrate email service to send the reset code to user's email
-                
+                const mailinfo = {
+                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
+                    to: username,
+                    subject: 'Password Reset Code',
+                    text: `Your password reset code is: ${resetCode}. It is valid for 15 minutes.`,
+                    html: `<p>Your password reset code is: <b>${resetCode}</b>. It is valid for 15 minutes.</p>`
+                };
+
+                transporter.sendMail(mailinfo, (error, info) => {
+                    if (error) {
+                        console.log('Error sending email:', error);
+                        return res.sendStatus(500);
+                    }
+                });
                 // Store reset code in database
                 var email_type = "password_reset";
                 const InsertQuery = 'Insert into Email_History (user_id, email_code, email_type) values (?, ?, ?)';

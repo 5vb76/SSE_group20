@@ -15,6 +15,11 @@ var vueinst = new Vue({
         provider_confirm_password: '',
         provider_address: '',
         provider_varifyEmailCode: '',
+
+        provider_address:'',
+        provider_city:'',
+        provider_state:'',
+        provider_postcode:'',
     },
     methods: {
         clearinput(){
@@ -123,7 +128,14 @@ var vueinst = new Vue({
             };
             xhttp.open("POST", "/signup/Pregister.ajax", true);
             xhttp.setRequestHeader("Content-type", "application/json");
-            xhttp.send(JSON.stringify({provider_name: this.provider_name, provider_email: this.provider_email, provider_password: this.provider_password, provider_address: this.provider_address, provider_varifyEmailCode: this.provider_varifyEmailCode }));
+            xhttp.send(JSON.stringify({provider_name: this.provider_name, provider_email: this.provider_email, 
+                provider_password: this.provider_password, provider_address: this.provider_address, 
+                provider_varifyEmailCode: this.provider_varifyEmailCode,
+                provider_address: this.provider_address,
+                provider_city: this.provider_city,
+                provider_state: this.provider_state,
+                provider_postcode:this.provider_postcode
+            }));
         },
 
 
