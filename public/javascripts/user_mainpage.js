@@ -197,6 +197,10 @@ var vueinst = new Vue({
                 hour12: false
             }).format(d);
         },
+        gocovid_status(){
+            this.mode = 'covid_report';
+            this.getUserInfo();
+        },
         gohome(){
             this.mode = 'shops';
             this.getProvider();
@@ -211,6 +215,55 @@ var vueinst = new Vue({
         },
         gohistory(){
             this.mode = 'history';
+        },
+        check_usercovid_status(){
+            var ptr = this;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200){
+                    const data = JSON.parse(xhttp.responseText);
+                    ptr.user_covid_status = data.user.covid_status;
+                    console.log("User covid status checked: " + data.user.covid_status);
+                }
+            };
+            xhttp.open("GET", "/User_main/check_user_covid_status", true);
+            xhttp.setRequestHeader("Content-type", "application/json");
+            xhttp.send();
+        },
+        reportCovid(status){
+            var ptr = this;
+            if(status !== 'Red' && status !== 'Yellow' && status !== 'Green'){
+                alert("Invalid status.");
+                return;
+            }
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200){
+                    const data = JSON.parse(xhttp.responseText);
+                    console.log("Covid status report successful: " + data.message);
+                    ptr.getUserInfo();
+                    //algorithm: change all relevant orders' covid status to the reported status and provider status as yellow.
+                    ptr.change_relevant_covid();
+                    alert("Covid status updated to " + status);
+                }
+            };
+            xhttp.open("POST", "/User_main/report_covid", true);
+            xhttp.setRequestHeader("Content-type", "application/json");
+            xhttp.send(JSON.stringify({ state_name:status }));
+        },
+        //algorithm: change all relevant orders' covid status to the reported status and provider status as yellow.
+        change_relevant_covid(){
+            var ptr = this;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200){
+                    const data = JSON.parse(xhttp.responseText);
+                    console.log("Relevant orders' covid status updated: " + data.message);
+                }
+            };
+            xhttp.open("GET", "/User_main/change_relevant_covid", true);
+            xhttp.setRequestHeader("Content-type", "application/json");
+            xhttp.send();
         },
         group_up_user_history(){
             var groups = {};
@@ -357,6 +410,10 @@ var vueinst = new Vue({
                     ptr.user_created_at = data.user.created_at;
                     ptr.user_address = data.address;
                     ptr.username = data.user.name;
+                    ptr.check_usercovid_status();
+                    ptr.user_type = data.user.user_type;
+                    ptr.user_email = data.user.email;
+                    console.log("User data loaded");
                     console.log(ptr.user_address);
                 }
                 else if(this.readyState == 4 && this.status == 401){

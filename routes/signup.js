@@ -131,11 +131,21 @@ router.post('/Cregister.ajax', function(req, res){
                 var password_hash = sha256(password);
                 const uquery = "UPDATE users SET name = ?, password_hash = ?, user_type = 'customer' WHERE email = ?";
                 connection.query(uquery, [username, password_hash, email], function(error, results) {
-                    connection.release();
+                    //connection.release();
                     if (error) {
                         console.log(error);
                         return res.status(502).json({ success: false, message: 'Database update error.' });
                     }
+                    //add to users_covid_status table with default green status
+                    const cquery = "INSERT INTO users_covid_status (user_id, state_name) VALUES ((SELECT user_id FROM users WHERE email = ?), 'Green')";
+                    connection.query(cquery, [email], function(error, results) {
+                        connection.release();
+                            if (error) {
+                                console.log(error);
+                                return res.status(504).json({ success: false, message: 'Database insert error.' });
+                            }
+                    });
+
                     return res.status(200).json({ success: true, message: 'Registration successful.' });
                 });
             }
@@ -262,11 +272,20 @@ router.post('/Pregister.ajax', function(req, res){
                     //add to provider address table
                     const aquery = "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES ((SELECT user_id FROM provider WHERE email = ?), ?, ?, ?, ?)";
                     connection.query(aquery, [email, address, city, state, postcode], function(error, results) {
-                        connection.release();
+                        //connection.release();
                             if (error) {
                                 console.log(error);
                                 return res.status(504).json({ success: false, message: 'Database insert error.' });
                             }
+                            //add to users_covid_status table with default green status
+                            const cquery = "INSERT INTO providers_covid_status (provider_id, state_name) VALUES ((SELECT user_id FROM provider WHERE email = ?), 'Green')";
+                            connection.query(cquery, [email], function(error, results) {
+                                connection.release();
+                                if (error) {
+                                    console.log(error);
+                                    return res.status(504).json({ success: false, message: 'Database insert error.' });
+                                }
+                            });
                     });
                     return res.status(200).json({ success: true, message: 'Registration successful.', redirectUrl: '/provider_login.html' });
                 });

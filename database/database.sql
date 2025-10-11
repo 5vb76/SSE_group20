@@ -249,7 +249,8 @@ VALUES
 (1, 'Yellow',   '2024-10-05 09:30:00'),
 (1, 'Green',  '2025-10-06 14:00:00'),
 (2, 'Red',   '2025-10-06 11:15:00'),
-(3, 'Green',     '2025-10-07 08:45:00');
+(3, 'Green',     '2025-10-07 08:45:00'),
+(4, 'Green',  '2025-10-07 10:20:00');
 
 INSERT INTO providers_covid_status (provider_id, state_name, contact_time)
 VALUES

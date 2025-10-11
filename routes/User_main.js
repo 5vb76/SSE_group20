@@ -97,7 +97,7 @@ router.get('/getProvider.ajax', function(req, res) {
 
 });
 
-router.get('/getuserinfo.ajax', function(req, res) {
+router.get('/getuserinfo.ajax', function(req, res, next) {
     //console.log('req.pool is', !!req.pool);
     if (!req.session.isLoggedIn) {
         return res.status(401).json({ success: false, message: 'Not logged in.' });
@@ -136,6 +136,101 @@ router.get('/getuserinfo.ajax', function(req, res) {
         });
     });
 });
+
+router.get('/check_user_covid_status', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = `
+            SELECT state_name, contact_time 
+            FROM users_covid_status 
+            WHERE user_id = ? 
+            ORDER BY contact_time DESC 
+            LIMIT 1;
+        `;
+        connection.query(query, [userId], function(error, results) {
+            //connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            if (!results || results.length === 0) {
+                return res.status(404).json({ success: false, message: 'No covid status found.' });
+            }
+            // Compare contact_time
+            const latest = results[0];
+            // if lastest status is Green, return
+            if (latest.state_name === 'Green') {
+                connection.release();
+                req.session.user.covid_status = 'Green';
+                return res.status(200).json({ success: true, state_name: latest.state_name, user: req.session.user });
+            }
+            else {
+                //means latest status is Yellow or Red, need to check time diff
+                const diffDays = (new Date() - new Date(latest.contact_time)) / (1000 * 60 * 60 * 24);
+                if (diffDays > 14) {
+                    // if more than 14 days, add new status to user_covid_status as Green
+                    const insertQuery = 'INSERT INTO users_covid_status (user_id, state_name) VALUES (?, ?)';
+                    connection.query(insertQuery, [userId, 'Green'], function(error, insertResults) {
+                        connection.release();
+                        if (error) {
+                            console.log(error);
+                            return res.sendStatus(500);
+                        }
+                        if (insertResults.affectedRows === 0) {
+                            return res.status(500).json({ success: false, message: 'Failed to update covid status.' });
+                        }
+                        req.session.user.covid_status = 'Green';
+                        return res.status(200).json({ success: true, state_name: 'Green', user: req.session.user });
+                    });
+                } else {
+                    req.session.user.covid_status = latest.state_name;
+                    return res.status(200).json({ success: false, state_name: latest.state_name, user: req.session.user });
+                }
+            }
+
+
+            // if latest contact_time is more than 14 days ago, add new status as Green
+
+        });
+    });
+
+});
+
+router.post('/report_covid', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { state_name } = req.body;
+    if (!state_name || !['Green', 'Yellow', 'Red'].includes(state_name)) {
+        return res.status(400).json({ success: false, message: 'Invalid state name.' });
+    }
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'INSERT INTO users_covid_status (user_id, state_name) VALUES (?, ?)';
+        connection.query(query, [userId, state_name], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            // Update session info
+            req.session.user.covid_status = state_name;
+            return res.status(200).json({ success: true, message: 'Covid status reported successfully.', covid_status: state_name, user: req.session.user });
+        });
+    });
+});
+
 
 router.post('/email_change', function(req, res) {
     if (!req.session.isLoggedIn) {
@@ -451,9 +546,35 @@ router.post('/checkout', function(req, res) {
                 });
             });
         });
-    });
+    });              
+});
 
-               
+router.post('/report_covid', function(req, res) {
+    if (!req.session.isLoggedIn) {
+        return res.status(401).json({ success: false, message: 'Not logged in.' });
+    }
+    const userId = req.session.user.id;
+    const { state_name } = req.body;
+    if (!state_name || !['Green', 'Yellow', 'Red'].includes(state_name)) {
+        return res.status(400).json({ success: false, message: 'Invalid state name.' });
+    }
+    req.pool.getConnection(function(error, connection) {
+        if (error) {
+            console.log(error);
+            return res.sendStatus(500);
+        }
+        const query = 'INSERT INTO users_covid_status (user_id, state_name) VALUES (?, ?)';
+        connection.query(query, [userId, state_name], function(error, results) {
+            connection.release();
+            if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+            }
+            // Update session info
+            req.session.user.covid_status = state_name;
+            return res.status(200).json({ success: true, message: 'Covid status reported successfully.', covid_status: state_name, user: req.session.user });
+        });
+    });
 });
 
 module.exports = router;

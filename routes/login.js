@@ -24,7 +24,7 @@ router.get('/', function(req, res, next) {
 
 router.get('/checkloginstatus.ajax', function(req, res, next) {
   if (!req.session.user) return res.sendStatus(401);
-  if (req.session.user.user_type !== 'customer'){
+  if (req.session.user.user_type !== 'customer' && req.session.user.user_type !== 'admin') {
     console.log(req.session.user.user_type);
     res.destroy('sid');
     return res.sendStatus(403);

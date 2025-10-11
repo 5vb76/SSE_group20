@@ -19,13 +19,13 @@
         </div>
       </div>
 
-      <div class="menu-item status-row" style="margin-bottom: 1;">
+      <a class="menu-item status-row" style="margin-bottom: 1;" href="" @click.prevent="gocovid_status()">
           <span class="menu-icon">🛡️</span>
           <span>Covid Status</span>
-          <span v-if="user_covid_status === 'Green'" span class="status-pill Green">Green</span>
-          <span v-if="user_covid_status === 'Yellow'" span class="status-pill Yellow">Yellow</span>
-          <span v-if="user_covid_status === 'Red'" span class="status-pill Red">Red</span>
-      </div>
+          <span v-if="user_covid_status === 'Green'" class="status-pill Green">Green</span>
+          <span v-if="user_covid_status === 'Yellow'" class="status-pill Yellow">Yellow</span>
+          <span v-if="user_covid_status === 'Red'" class="status-pill Red">Red</span>
+      </a>
 
       <nav class="menu">
         <a class="menu-item" href="" @click.prevent="gohome()">
@@ -374,6 +374,26 @@
                 </div>
               </div>
             </div>
+        </div>
+    </section>
+    <!--Covid report-->
+    <section class="profile card" v-if="mode ==='covid_report'">
+        <h1>Covid Status
+            <span class="status-pill" :class="user_covid_status">
+              Covid: {{ user_covid_status }}
+            </span>
+        </h1>
+        <div class="profile">
+            <div v-if="user_covid_status === 'Red' || user_covid_status === 'Yellow'">
+              <p>Your Covid status is {{ user_covid_status }}. Please take necessary precautions.</p>
+              <button v-if="user_type === 'admin'" class="btn" @click="reportCovid('Green')">(Admin Only) Switch to Green</button>
+            </div>
+            <div v-else>
+              <p>Your Covid status is Green. Stay safe!</p>
+              <h3>Face any dangerous contacts?</h3>
+              <button class="btn" @click="reportCovid('Red')">Yes, I have been in contact with a confirmed case (Report as Red)</button>
+              <button class="btn" @click="reportCovid('Yellow')">Yes, I have been in contact with a suspected case (Report as Yellow)</button>
+          </div>
         </div>
     </section>
     <!--purchase cart-->
