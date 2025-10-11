@@ -403,12 +403,6 @@ router.post('/checkout', function(req, res) {
             return res.sendStatus(500);
         }
         // Start transaction
-        connection.beginTransaction(function(err) {
-            if (err) {
-                connection.release();
-                console.log(err);
-                return res.sendStatus(500);
-            }
             const insertPaymentQuery = 'INSERT INTO payment (payment_method, payment_status, amount) VALUES (?, ?, ?)';
             connection.query(insertPaymentQuery, [payment_method, 'pending', amount], function(error, paymentResults) {
                 if (error) {
@@ -450,13 +444,13 @@ router.post('/checkout', function(req, res) {
                                 console.log(error);
                                 return res.sendStatus(500);
                             }
+                            
                             res.status(200).json({ success: true, message: 'Checkout successful.' });
 
                     });
                 });
             });
         });
-    });
     });
 
                

@@ -245,7 +245,8 @@ var vueinst = new Vue({
                     quantity: o.quantity
                 });
             });
-            this.grouped_user_history = groups;
+            // reverse grouped_user_history to have latest orders first order by service_id.
+            this.grouped_user_history = Object.values(groups || {}).sort((a, b) => Number(b.service_id) - Number(a.service_id));
             console.log(this.grouped_user_history);
         },
         get_user_history(){
@@ -255,7 +256,7 @@ var vueinst = new Vue({
                 if (this.readyState == 4 && this.status == 200){
                     const data = JSON.parse(xhttp.responseText);
                     ptr.user_history = data.history;
-                    console.log(ptr.user_history);
+                    //console.log(ptr.user_history);
                     ptr.group_up_user_history();
                 }
                 else if(this.readyState == 4 && this.status == 401){
@@ -315,7 +316,7 @@ var vueinst = new Vue({
         checkout(){
             var ptr = this;
             var cart = this.focused_provider.items.filter(function(item) {
-                return String(item.status).toLowerCase() !== 'out_of_stock';
+                return String(item.status).toLowerCase() !== 'out_of_stock' && item.qty && item.qty > 0;
             });
             console.log(cart);
             if(!this.payment_method){
