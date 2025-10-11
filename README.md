@@ -32,13 +32,25 @@ myapp/
 │ └── users.js
 └── README.md
 ```
+## 1. Prepare environment
+### Install Node.js & npm
+Download [Node.js LTS](https://nodejs.org/en/download/), Check npm status:
+```
+node -v
+npm -v
+```
+
+### Install MySQL
+1. Install MySQL Community Server
+2. Set root Password
+3. Launch MySql server.
 
 # 10/10 UPDATE: IMPORTANT
 Follow the Makefile to setup environment and database.
 ### 1. Setup environment
 Use command
 ```
-make init
+make setup
 ```
 ### 2. Initialize all database
 Use Command
@@ -52,19 +64,7 @@ Use command
 make db
 ```
 
-# OLD GUIDE
-## 1. Prepare environment
-### Install Node.js & npm
-Download [Node.js LTS](https://nodejs.org/en/download/), Check npm status:
-```
-node -v
-npm -v
-```
-
-### Install MySQL
-1. Install MySQL Community Server
-2. Set root Password
-3. Launch MySql server.
+# OLD GUIDE (You can skip the rest..)
 
 ## 2. Initialization
 ### Initialise Database
