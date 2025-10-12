@@ -1,145 +1,346 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
-  <title>Login</title>
-  <link rel="stylesheet" href="/stylesheets/login.css" />
-</head>
-<body>
-  <main class="container">
-    <section id="forms" class="card" role="form" aria-labelledby="title">
-      <!--login form -->
-      <form v-if="mode === 'whosignup'" id="login-form" autocomplete="on" novalidate>
-        <h1 id="title" class="title">Who are you?</h1>
-        <p class="subtitle">Please signup your account</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <title>Login</title>
+    <link rel="stylesheet" href="/stylesheets/login.css" />
+  </head>
+  <body>
+    <main class="container">
+      <section id="forms" class="card" role="form" aria-labelledby="title">
+        <!--login form -->
+        <form
+          v-if="mode === 'whosignup'"
+          id="login-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 id="title" class="title">Who are you?</h1>
+          <p class="subtitle">Please signup your account</p>
 
-        <div class="field">
-          <h1 id="title" class="title">Customer</h1>
-          <button id="submitBtn" class="btn" type="button" v-on:click="switchCsignup()">Customer Signup</button>
-        </div>
-
-        <div class="field">
-          <h1 id="title" class="title">Provider</h1>
-          <button id="submitBtn" class="btn" type="button" v-on:click="switchPsignup()">Provider Signup</button>
-        </div>
-
-        <div class="row">
-          <a href="#" id="forgot" onclick="window.location.href='/'">Already has an account?</a>
-        </div>
-      </form>
-      <!-- Customer signup form -->
-      <form v-if="mode === 'customer'" id="customer-signup-form" autocomplete="on" novalidate>
-        <h1 id="title" class="title">Customer Signup</h1>
-        <p class="subtitle">Please Enter Your Information</p>
-        <div class="field">
-          <label class="label" for="customername">Name</label>
-          <div class="input-wrap">
-            <input id="customername" name="customername" type="text" v-model="user_name" placeholder="Your Name" required />
+          <div class="field">
+            <h1 id="title" class="title">Customer</h1>
+            <button
+              id="submitBtn"
+              class="btn"
+              type="button"
+              v-on:click="switchCsignup()"
+            >
+              Customer Signup
+            </button>
           </div>
-        </div>
-        <div class="field">
-          <label class="label" for="email">Email</label>
-          <div class="input-wrap">
-            <input id="email" name="customeremail" type="email" v-model="user_email" placeholder="example@example.com" required />
-          </div>
-        </div>
-        <div class="field">
-          <label class="label" for="password">Password</label>
-          <div class="input-wrap">
-            <input id="password" name="password" type="password" v-model="user_password" placeholder="••••••••" required minlength="6" />
-            <button type="button" id="togglePwd" class="toggle" aria-label="Display Password" v-on:click="show()">Show</button>
+
+          <div class="field">
+            <h1 id="title" class="title">Provider</h1>
+            <button
+              id="submitBtn"
+              class="btn"
+              type="button"
+              v-on:click="switchPsignup()"
+            >
+              Provider Signup
+            </button>
+            <div style="margin-top: 8px">
+              <a
+                href="/provider_signup.html"
+                style="
+                  color: var(--accent);
+                  text-decoration: none;
+                  font-size: 14px;
+                "
+                >Or use dedicated provider signup page</a
+              >
             </div>
-        </div>
-        <div class="field">
-          <label class="label" for="confirm_password">Confirm Password</label>
-          <div class="input-wrap">
-            <input id="confirm_password" name="confirm_password" type="password" v-model="user_confirm_password" placeholder="••••••••" required minlength="6" />
-            <button type="button" id="togglePwd" class="toggle" aria-label="Display Password" v-on:click="cshow()">Show</button> 
           </div>
-        </div>
-        <div class="field">
+
+          <div class="row">
+            <a href="#" id="forgot" onclick="window.location.href='/'"
+              >Already has an account?</a
+            >
+          </div>
+        </form>
+        <!-- Customer signup form -->
+        <form
+          v-if="mode === 'customer'"
+          id="customer-signup-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 id="title" class="title">Customer Signup</h1>
+          <p class="subtitle">Please Enter Your Information</p>
+          <div class="field">
+            <label class="label" for="customername">Name</label>
+            <div class="input-wrap">
+              <input
+                id="customername"
+                name="customername"
+                type="text"
+                v-model="user_name"
+                placeholder="Your Name"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="email">Email</label>
+            <div class="input-wrap">
+              <input
+                id="email"
+                name="customeremail"
+                type="email"
+                v-model="user_email"
+                placeholder="example@example.com"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                v-model="user_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                aria-label="Display Password"
+                v-on:click="show()"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="confirm_password">Confirm Password</label>
+            <div class="input-wrap">
+              <input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                v-model="user_confirm_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                aria-label="Display Password"
+                v-on:click="cshow()"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <div class="field">
             <label class="label" for="EmailConfirm">Email Varify Code</label>
             <div class="input-wrap">
-                <input id="varifyEmail" name="varifyEmail" type="text" v-model="varifyEmailCode" placeholder="e.g. 123456" />
-                <button type="button" id="togglePwd" class="toggle" v-on:click="c_email_varify()">Get Code</button> 
+              <input
+                id="varifyEmail"
+                name="varifyEmail"
+                type="text"
+                v-model="varifyEmailCode"
+                placeholder="e.g. 123456"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                v-on:click="c_email_varify()"
+              >
+                Get Code
+              </button>
             </div>
-        </div>
-        <button id="submitBtn" class="btn" type="button" v-on:click="Cregister()">Sign up</button>
-        <div class="row">
-          <a href="#" v-on:click.prevent="switchToSignup">Are you Provider?</a>
-        </div>
-    </form>
-    <!--Provider Sign up -->
-    <form v-if="mode === 'provider'" id="provider-signup-form" autocomplete="on" novalidate>
-        <h1 id="title" class="title">Provider Signup</h1>
-        <p class="subtitle">Please Enter Your Information</p>
-        <div class="field">
-          <label class="label" for="customername">Name</label>
-          <div class="input-wrap">
-            <input id="customername" name="customername" type="text" v-model="provider_name" placeholder="Your Name" required />
           </div>
-        </div>
-        <div class="field">
-          <label class="label" for="email">Email</label>
-          <div class="input-wrap">
-            <input id="email" name="customeremail" type="email" v-model="provider_email" placeholder="example@example.com" required />
+          <button
+            id="submitBtn"
+            class="btn"
+            type="button"
+            v-on:click="Cregister()"
+          >
+            Sign up
+          </button>
+          <div class="row">
+            <a href="#" v-on:click.prevent="switchToSignup"
+              >Are you Provider?</a
+            >
           </div>
-        </div>
-        <div class="field">
-          <label class="label" for="password">Password</label>
-          <div class="input-wrap">
-            <input id="password" name="password" type="password" v-model="provider_password" placeholder="••••••••" required minlength="6" />
-            <button type="button" id="togglePwd" class="toggle" aria-label="Display Password" v-on:click="show()">Show</button>
+        </form>
+        <!--Provider Sign up -->
+        <form
+          v-if="mode === 'provider'"
+          id="provider-signup-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 id="title" class="title">Provider Signup</h1>
+          <p class="subtitle">Please Enter Your Information</p>
+          <div class="field">
+            <label class="label" for="customername">Name</label>
+            <div class="input-wrap">
+              <input
+                id="customername"
+                name="customername"
+                type="text"
+                v-model="provider_name"
+                placeholder="Your Name"
+                required
+              />
             </div>
-        </div>
-        <div class="field">
-          <label class="label" for="confirm_password">Confirm Password</label>
-          <div class="input-wrap">
-            <input id="confirm_password" name="confirm_password" type="password" v-model="provider_confirm_password" placeholder="••••••••" required minlength="6" />
-            <button type="button" id="togglePwd" class="toggle" aria-label="Display Password" v-on:click="cshow()">Show</button> 
           </div>
-        </div>
-        <div class="field">
+          <div class="field">
+            <label class="label" for="email">Email</label>
+            <div class="input-wrap">
+              <input
+                id="email"
+                name="customeremail"
+                type="email"
+                v-model="provider_email"
+                placeholder="example@example.com"
+                required
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                v-model="provider_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                aria-label="Display Password"
+                v-on:click="show()"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="confirm_password">Confirm Password</label>
+            <div class="input-wrap">
+              <input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                v-model="provider_confirm_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                aria-label="Display Password"
+                v-on:click="cshow()"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+          <div class="field">
             <label class="label" for="address">Address</label>
             <div class="input-wrap">
-                <input id="provider_address" name="provider_address" type="text" v-model="provider_address" placeholder="e.g. 1 Apple Road" />
+              <input
+                id="provider_address"
+                name="provider_address"
+                type="text"
+                v-model="provider_address"
+                placeholder="e.g. 1 Apple Road"
+              />
             </div>
-        </div>
-        <div class="field">
+          </div>
+          <div class="field">
             <label class="label" for="address">City</label>
             <div class="input-wrap">
-                <input id="provider_address" name="provider_address" type="text" v-model="provider_city" placeholder="e.g. Adelaide" />
+              <input
+                id="provider_address"
+                name="provider_address"
+                type="text"
+                v-model="provider_city"
+                placeholder="e.g. Adelaide"
+              />
             </div>
-        </div>
-        <div class="field">
+          </div>
+          <div class="field">
             <label class="label" for="address">State</label>
             <div class="input-wrap">
-                <input id="provider_address" name="provider_address" type="text" v-model="provider_state" placeholder="e.g. SA" />
+              <input
+                id="provider_address"
+                name="provider_address"
+                type="text"
+                v-model="provider_state"
+                placeholder="e.g. SA"
+              />
             </div>
-        </div>
-        <div class="field">
+          </div>
+          <div class="field">
             <label class="label" for="address">Post Code</label>
             <div class="input-wrap">
-                <input id="provider_address" name="provider_address" type="text" v-model="provider_postcode" placeholder="e.g. 5000" />
+              <input
+                id="provider_address"
+                name="provider_address"
+                type="text"
+                v-model="provider_postcode"
+                placeholder="e.g. 5000"
+              />
             </div>
-        </div>
-        <div class="field">
+          </div>
+          <div class="field">
             <label class="label" for="EmailConfirm">Email Varify Code</label>
             <div class="input-wrap">
-                <input id="varifyEmail" name="varifyEmail" type="text" v-model="provider_varifyEmailCode" placeholder="e.g. 123456" />
-                <button type="button" id="togglePwd" class="toggle" v-on:click="p_email_varify()">Get Code</button> 
+              <input
+                id="varifyEmail"
+                name="varifyEmail"
+                type="text"
+                v-model="provider_varifyEmailCode"
+                placeholder="e.g. 123456"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                v-on:click="p_email_varify()"
+              >
+                Get Code
+              </button>
             </div>
-        </div>
-        <button id="submitBtn2" class="btn" type="button" v-on:click="Pregister()">Sign up</button>
-        <div class="row">
-          <a href="#" v-on:click.prevent="switchToSignup">Are you Customer?</a>
-        </div>
-    </form>
-      
-    </section>
-  </main>
-  <script src="/javascripts/signup.js"></script>
-</body>
+          </div>
+          <button
+            id="submitBtn2"
+            class="btn"
+            type="button"
+            v-on:click="Pregister()"
+          >
+            Sign up
+          </button>
+          <div class="row">
+            <a href="#" v-on:click.prevent="switchToSignup"
+              >Are you Customer?</a
+            >
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="/javascripts/signup.js"></script>
+  </body>
 </html>

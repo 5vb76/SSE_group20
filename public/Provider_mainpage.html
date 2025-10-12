@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <title>GOGO Delivery - Provider Dashboard</title>
+    <link rel="stylesheet" href="stylesheets/mainpage.css" />
+    <style>
+      [v-cloak] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" id="app" v-cloak>
+      <!-- 左侧侧边栏 -->
+      <aside class="sidebar card">
+        <div class="sidebar-header">
+          <div class="avatar">P</div>
+          <div class="hello">
+            <div class="hello-title">Hello, {{ provider_name }}.</div>
+            <div class="hello-sub">Provider Dashboard 👨‍💼</div>
+          </div>
+        </div>
+
+        <a
+          class="menu-item status-row"
+          style="margin-bottom: 1rem"
+          href=""
+          @click.prevent="gocovid_status()"
+        >
+          <span class="menu-icon">🛡️</span>
+          <span>Covid Status</span>
+          <span
+            v-if="provider_covid_status === 'Green'"
+            class="status-pill Green"
+            >Green</span
+          >
+          <span
+            v-else-if="provider_covid_status === 'Yellow'"
+            class="status-pill Yellow"
+            >Yellow</span
+          >
+          <span v-else class="status-pill Red">Red</span>
+        </a>
+
+        <nav class="menu">
+          <a class="menu-item" href="" @click.prevent="gohome()">
+            <span class="menu-icon">🏠</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="menu-item" href="" @click.prevent="goprofile()">
+            <span class="menu-icon">👤</span>
+            <span>Profile</span>
+          </a>
+          <a class="menu-item" href="" @click.prevent="gosetting()">
+            <span class="menu-icon">⚙️</span>
+            <span>Account Setting</span>
+          </a>
+          <a class="menu-item" href="" @click.prevent="goorders()">
+            <span class="menu-icon">📋</span>
+            <span>Orders</span>
+          </a>
+          <a class="menu-item" href="" @click.prevent="goproducts()">
+            <span class="menu-icon">🍽️</span>
+            <span>Products</span>
+          </a>
+          <a class="menu-item" href="" @click.prevent="signout()">
+            <span class="menu-icon">↩️</span>
+            <span>Sign out</span>
+          </a>
+        </nav>
+      </aside>
+
+      <!-- 主区域 -->
+      <main class="main">
+        <!-- 顶部标题 -->
+        <header class="topbar">
+          <div class="site-title">GOGO Delivery - Provider</div>
+          <div class="top-actions">
+            <input
+              class="search"
+              type="text"
+              placeholder="Search for orders..."
+              v-model="searchQuery"
+              @input="filterOrders()"
+            />
+            <button class="btn" @click="refreshOrders()">Refresh</button>
+          </div>
+        </header>
+
+        <!-- 订单列表 -->
+        <section class="merchant-grid" v-if="mode === 'orders'">
+          <article
+            v-for="order in filteredOrders"
+            :key="order.service_id"
+            class="merchant card"
+          >
+            <div class="merchant-head">
+              <h3 class="merchant-name">Order #{{ order.service_id }}</h3>
+              <span class="status-pill" :class="order.order_covid_status">
+                {{ order.order_covid_status }}
+              </span>
+            </div>
+
+            <div class="order-info">
+              <div class="menu-item status-row">
+                <span>Customer:</span>
+                <span class="status">{{ order.customer_name }}</span>
+              </div>
+              <div class="menu-item status-row">
+                <span>Order Time:</span>
+                <span class="status"
+                  >{{ formatOrderTime(order.order_timestamp) }}</span
+                >
+              </div>
+              <div class="menu-item status-row">
+                <span>Order Status:</span>
+                <span
+                  class="status-pill"
+                  :class="getOrderStatusClass(order.order_status)"
+                >
+                  {{ order.order_status }}
+                </span>
+              </div>
+              <div class="menu-item status-row">
+                <span>Total Amount:</span>
+                <span class="status">${{ order.amount }}</span>
+              </div>
+            </div>
+
+            <div class="delivery-info">
+              <h4>Delivery Information:</h4>
+              <p class="merchant-desc">
+                <strong>From:</strong> {{ order.pickup_address }}<br />
+                <strong>To:</strong> {{ order.dropoff_address }}
+              </p>
+            </div>
+
+            <div class="order-items">
+              <h4>Order Items:</h4>
+              <ul class="items">
+                <li v-for="(item, idx) in order.items" :key="idx">
+                  <span class="item-name">{{ item.product_name }}</span>
+                  <span class="item-price">
+                    ${{ item.price }} x {{ item.quantity }} = {{ (item.price *
+                    item.quantity).toFixed(2) }}
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="merchant-actions">
+              <button
+                class="btn"
+                :class="getButtonClass(order.order_status)"
+                :disabled="order.order_status === 'finished'"
+                @click="updateOrderStatus(order.service_id, order.order_status)"
+              >
+                {{ getButtonText(order.order_status) }}
+              </button>
+              <button class="btn btn-ghost" @click="viewOrderDetails(order)">
+                View Details
+              </button>
+            </div>
+          </article>
+
+          <div v-if="filteredOrders.length === 0" class="merchant card">
+            <div class="merchant-head">
+              <h3 class="merchant-name">No Orders Found</h3>
+            </div>
+            <p class="merchant-desc">{{ emptyText }}</p>
+          </div>
+        </section>
+
+        <!-- Profile -->
+        <section class="profile card" v-if="mode === 'profile'">
+          <h1>Provider Profile</h1>
+          <div class="profile">
+            <div class="menu-item status-row">
+              <span>Business Name</span>
+              <span class="status">{{ provider_name }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Provider ID</span>
+              <span class="status">{{ provider_id }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Covid Status</span>
+              <span
+                v-if="provider_covid_status === 'Green'"
+                class="status-pill Green"
+                >Green</span
+              >
+              <span
+                v-else-if="provider_covid_status === 'Yellow'"
+                class="status-pill Yellow"
+                >Yellow</span
+              >
+              <span v-else class="status-pill Red">Red</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Email</span>
+              <span class="status">{{ provider_email }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Description</span>
+              <span class="status">{{ provider_description }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Created at</span>
+              <span class="status">{{ provider_created_at }}</span>
+            </div>
+
+            <h3>Business Address</h3>
+            <section class="card">
+              <div v-if="provider_address.length === 0">
+                No address available.
+              </div>
+              <div v-else>
+                <ul>
+                  <li v-for="(addr, index) in provider_address" :key="index">
+                    {{ addr.address }}, {{ addr.city }}, {{ addr.state }}, {{
+                    addr.postcode }}
+                  </li>
+                </ul>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Account Setting -->
+        <section class="profile card" v-if="mode === 'setting'">
+          <h1>Account Setting</h1>
+          <!-- Edit business name -->
+          <div class="menu-item status-row">
+            <span>Business Name</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <template v-if="!editing.business_name">
+                <span class="status">{{ provider_name }}</span>
+                <button
+                  class="btn btn-ghost"
+                  @click="toggleEdit('business_name',0)"
+                >
+                  Edit
+                </button>
+              </template>
+              <template v-else>
+                <input
+                  class="inline-input"
+                  type="text"
+                  v-model.trim="form.business_name"
+                  placeholder="Enter new business name"
+                />
+                <button
+                  class="btn btn-ghost"
+                  @click="toggleEdit('business_name',0)"
+                >
+                  Cancel
+                </button>
+                <button class="btn" @click="business_name_change()">
+                  Submit
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Edit description -->
+          <div class="menu-item status-row">
+            <span>Description</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <template v-if="!editing.description">
+                <span class="status">{{ provider_description }}</span>
+                <button
+                  class="btn btn-ghost"
+                  @click="toggleEdit('description',0)"
+                >
+                  Edit
+                </button>
+              </template>
+              <template v-else>
+                <input
+                  class="inline-input"
+                  type="text"
+                  v-model.trim="form.description"
+                  placeholder="Enter new description"
+                />
+                <button
+                  class="btn btn-ghost"
+                  @click="toggleEdit('description',0)"
+                >
+                  Cancel
+                </button>
+                <button class="btn" @click="description_change()">
+                  Submit
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Edit password -->
+          <div class="menu-item status-row">
+            <h4>Password</h4>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="status">********</span>
+              <button
+                v-if="!editing.password"
+                class="btn btn-ghost"
+                @click="toggleEdit('password',0)"
+              >
+                Change Password
+              </button>
+              <button
+                v-else
+                class="btn btn-ghost"
+                @click="toggleEdit('password',0)"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <!-- Edit password pop out-->
+          <div class="menu-item status-row" v-if="editing.password">
+            <span>New Password</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <input
+                class="inline-input"
+                type="password"
+                v-model.trim="reset_pass.password"
+                placeholder="Enter new password"
+              />
+            </div>
+          </div>
+
+          <div class="menu-item status-row" v-if="editing.password">
+            <span>Confirm Password</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <input
+                class="inline-input"
+                type="password"
+                v-model.trim="reset_pass.confirm_password"
+                placeholder="Confirm new password"
+              />
+            </div>
+          </div>
+
+          <div class="menu-item status-row" v-if="editing.password">
+            <span>Email Verification Code</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <input
+                class="inline-input"
+                type="text"
+                v-model.trim="reset_pass.email_code"
+                placeholder="Enter email verification code"
+              />
+            </div>
+          </div>
+
+          <div v-if="editing.password">
+            <button class="btn btn-ghost" @click="getemailcode()">
+              Get Email Verification Code
+            </button>
+            <button class="btn" style="float: right" @click="password_change()">
+              Submit
+            </button>
+          </div>
+        </section>
+
+        <!-- Products Management -->
+        <section class="profile card" v-if="mode === 'products'">
+          <h1>Product Management</h1>
+          <div class="profile">
+            <div v-if="products.length === 0">
+              No products available. Add your first product!
+            </div>
+            <div v-else>
+              <div
+                v-for="(product, index) in products"
+                :key="index"
+                class="merchant card"
+              >
+                <div class="merchant-head">
+                  <h3 class="merchant-name">{{ product.name }}</h3>
+                  <span
+                    class="status-pill"
+                    :class="product.status === 'available' ? 'Green' : 'Red'"
+                  >
+                    {{ product.status }}
+                  </span>
+                </div>
+                <div class="menu-item status-row">
+                  <span>Price:</span>
+                  <span class="status">${{ product.price }}</span>
+                </div>
+                <div class="merchant-actions">
+                  <button class="btn btn-ghost" @click="editProduct(product)">
+                    Edit
+                  </button>
+                  <button
+                    class="btn"
+                    @click="toggleProductStatus(product.product_id, product.status)"
+                  >
+                    <span v-if="product.status === 'available'"
+                      >Mark as Out of Stock</span
+                    >
+                    <span v-else>Mark as Available</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Covid Status Report -->
+        <section class="profile card" v-if="mode === 'covid_report'">
+          <h1>
+            Covid Status
+            <span class="status-pill" :class="provider_covid_status">
+              Covid: {{ provider_covid_status }}
+            </span>
+          </h1>
+          <div class="profile">
+            <div
+              v-if="provider_covid_status === 'Red' || provider_covid_status === 'Yellow'"
+            >
+              <p>
+                Your Covid status is {{ provider_covid_status }}. Please take
+                necessary precautions.
+              </p>
+              <button
+                v-if="provider_type === 'admin'"
+                class="btn"
+                @click="reportCovid('Green')"
+              >
+                (Admin Only) Switch to Green
+              </button>
+            </div>
+            <div v-else>
+              <p>Your Covid status is Green. Stay safe!</p>
+              <h3>Face any dangerous contacts?</h3>
+              <button class="btn" @click="reportCovid('Red')">
+                Yes, I have been in contact with a confirmed case (Report as
+                Red)
+              </button>
+              <button class="btn" @click="reportCovid('Yellow')">
+                Yes, I have been in contact with a suspected case (Report as
+                Yellow)
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/javascripts/provider_mainpage.js"></script>
+  </body>
+</html>
