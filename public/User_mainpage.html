@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <title>GOGO delivery - Main</title>
+  <link rel="stylesheet" href="stylesheets/mainpage.css" />
+</head>
+<body>
+  <div class="app" id ="app">
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar card">
+      <div class="sidebar-header">
+        <div class="avatar">G</div>
+        <div class="hello">
+          <div class="hello-title">Hello, {{username}}.</div>
+          <div class="hello-sub">Welcome back! 👋</div>
+        </div>
+      </div>
+
+      <a class="menu-item status-row" style="margin-bottom: 1;" href="" @click.prevent="gocovid_status()">
+          <span class="menu-icon">🛡️</span>
+          <span>Covid Status</span>
+          <span v-if="user_covid_status === 'Green'" class="status-pill Green">Green</span>
+          <span v-if="user_covid_status === 'Yellow'" class="status-pill Yellow">Yellow</span>
+          <span v-if="user_covid_status === 'Red'" class="status-pill Red">Red</span>
+      </a>
+
+      <nav class="menu">
+        <a class="menu-item" href="" @click.prevent="gohome()">
+          <span class="menu-icon">🏠</span>
+          <span>Home</span>
+        </a>
+        <a class="menu-item" href="" @click.prevent="goprofile()">
+          <span class="menu-icon">👤</span>
+          <span>Profile</span>
+        </a>
+        <a class="menu-item" href="" @click.prevent="gosetting()">
+          <span class="menu-icon">⚙️</span>
+          <span>Account Setting</span>
+        </a>
+        <a class="menu-item" href="" @click.prevent="gohistory()">
+          <span class="menu-icon">📜</span>
+          <span>History</span>
+        </a>
+
+          <a class="menu-item" href="" @click.prevent="signout()">
+          <span class="menu-icon">↩️</span>
+          <span>Sign out</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- 主区域 -->
+    <main class="main">
+      <!-- 顶部标题 -->
+      <header class="topbar">
+        <div class="site-title">GOGO Delivery</div>
+        <div class="top-actions">
+          <input class="search" type="text" placeholder="Search for Resturant...." v-on:click="Search()"/>
+          <button class="btn">Search</button>
+        </div>
+      </header>
+
+      <!-- 商家列表 -->
+        <section class="merchant-grid" v-if="mode ==='shops'">
+        <article v-for="p in provider" :key="p.id" class="merchant card">
+          <div class="merchant-head">
+            <h3 class="merchant-name">{{ p.name }}</h3>
+            <span class="status-pill" :class="p.covid_status">
+              Covid: {{ p.covid_status }}
+            </span>
+          </div>
+
+          <p class="merchant-desc">
+            {{ p.description || 'No description' }}
+          </p>
+
+          <ul class="items">
+            <li v-for="(it, idx) in (p.items || []).slice(0, 3)" :key="idx">
+              <span class="item-name" v-if="it.status === 'available'">{{ it.name }}</span>
+              <span class="item-name" v-if="it.status === 'out_of_stock'">{{ it.name }} ---- Out of Stock</span>
+              <span class="item-price">${{ it.price }}</span>
+            </li>
+            <li v-if="!p.items || p.items.length === 0">
+              <span class="item-name">No Product at this time, sorry</span>
+              <span class="item-price">—</span>
+            </li>
+          </ul>
+
+          <div class="merchant-actions">
+            <button style="margin-top: 8px;" class="btn" :disabled="isBlocked(p.covid_status)" v-on:click="viewProvider(p.id)">
+            {{ isBlocked(p.covid_status) ? 'Cannot Order now' : 'Purchase' }}
+            </button>
+          </div>
+        </article>
+
+      </section>
+      <!-- Profile -->
+      <section class="profile card" v-if="mode ==='profile'">
+        <h1>User Profile</h1>
+        <div class="profile">
+            
+            <div class="menu-item status-row">
+              <span>User name</span>
+              <span class="status">{{ username }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>User ID</span>
+              <span class="status">{{ user_id }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Covid Status</span>
+              <span v-if="user_covid_status === 'Green'" span class="status-pill Green">Green</span>
+              <span v-if="user_covid_status === 'Yellow'" span class="status-pill Yellow">Yellow</span>
+              <span v-if="user_covid_status === 'Red'" span class="status-pill Red">Red</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Email</span>
+              <span class="status">{{ user_email }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>User Type</span>
+              <span class="status">{{ user_type }}</span>
+            </div>
+
+            <div class="menu-item status-row">
+              <span>Created at</span>
+              <span class="status">{{ user_created_at }}</span>
+            </div>
+
+            <h3>Stored Address</h3>
+            <section class="card">
+            <div v-if="user_address.length === 0">
+              No address available.
+            </div>
+            <div v-else>
+              <ul>
+                <li v-for="(addr, index) in user_address" :key="index">
+                  {{ addr.address }}, {{ addr.city }}, {{ addr.state }}, {{ addr.postcode }}
+                </li>
+              </ul>
+            </div>
+            </section>
+        </div>
+      </section>
+
+    <!--Account setting-->
+    <section class="profile card" v-if="mode ==='setting'">
+        <h1>Account Setting</h1>
+        <!-- Edit username -->
+        <div class="menu-item status-row">
+          <span>User name</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template v-if="!editing.username">
+              <span class="status">{{ username }}</span>
+              <button class="btn btn-ghost" @click="toggleEdit('username',0)">Edit</button>
+            </template>
+            <template v-else>
+                <input class="inline-input"
+                  type="text"
+                  v-model.trim="form.username"
+                  class="inline-input"
+                  placeholder="Enter new user name"
+                />
+              <button class="btn btn-ghost" @click="toggleEdit('username',0)">Return</button>
+              <button class="btn" @click="username_change()">Submit</button>
+            </template>
+          </div>
+        </div>
+        <!-- Edit address -->
+        <div class="menu-item status-row">
+          <span>Address</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template v-if="!editing.address">
+              <div v-if="user_address.length === 0">
+                No address available.
+              </div>
+              <div v-else>
+                <ul>
+                  <li class="menu-item status-row" v-for="(addr, index) in user_address" :key="index">
+                  {{ addr.address }}, {{ addr.city }}, {{ addr.state }}, {{ addr.postcode }}
+                  <button class="btn btn-ghost" v-if="!editing.address_id" @click="toggleEdit('address_id',addr.id)">Edit</button>
+                  <template v-if="addr.id === form.address_id && editing.address_id">
+                    <div style="margin-top:8px;">
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="form.address"
+                        class="inline-input"
+                        placeholder="Enter new address"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="form.city"
+                        class="inline-input"
+                        placeholder="Enter new city"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="form.state"
+                        class="inline-input"
+                        placeholder="Enter new state"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="form.postcode"
+                        class="inline-input"
+                        placeholder="Enter new postcode"
+                      />
+                      <button class="btn btn-ghost" @click="toggleEdit('address_id',addr.id)">Return</button>
+                      <button class="btn" @click="email_change()">Submit</button>
+                      <button class="btn" @click="delete_address(addr.id)">Delete</button>
+                    </div>
+                  </template>
+                  </li>
+                </ul>
+              </div>
+
+            </template>
+          </div>
+        </div>
+
+        <div class="menu-item status-row">
+          <span></span>
+           <button class="btn btn-ghost" @click="toggleEdit('add_addr',0)" v-if="!editing.add_addr">Add New Address</button>
+                    <template v-if="editing.add_addr">
+                    <div style="margin-top:8px;">
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="add_addr.address"
+                        class="inline-input"
+                        placeholder="Enter new address"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="add_addr.city"
+                        class="inline-input"
+                        placeholder="Enter new city"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="add_addr.state"
+                        class="inline-input"
+                        placeholder="Enter new state"
+                      />
+                      <input class="inline-input"
+                        type="text"
+                        v-model.trim="add_addr.postcode"
+                        class="inline-input"
+                        placeholder="Enter new postcode"
+                      />
+                      <button class="btn btn-ghost" @click="toggleEdit('add_addr',0)">Return</button>
+                      <button class="btn" @click="add_address()">Submit</button>
+                      </div>
+                    </template>
+
+        </div>
+        <!-- Edit password -->
+        <div class="menu-item status-row">
+          <h4>Password</h4>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template>
+              <span class="status">********</span>
+              <button v-if="!editing.password" class="btn btn-ghost" @click="toggleEdit('password',0)">Change Password</button>
+              <button v-if="editing.password" class="btn btn-ghost" @click="toggleEdit('password',0)">Cancel</button>
+            </template>
+  
+          </div>
+        </div>
+        <!-- Edit password pop out-->
+        <div class="menu-item status-row" v-if="editing.password">
+          <span>New Password</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template>
+                <input class="inline-input"
+                  type="password"
+                  v-model.trim="reset_pass.password"
+                  class="inline-input"
+                  placeholder="Enter new password"
+                />
+            </template>
+          </div>
+        </div>
+
+        <div class="menu-item status-row" v-if="editing.password">
+          <span>Confirm Password</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template>
+                <input class="inline-input"
+                  type="password"
+                  v-model.trim="reset_pass.confirm_password"
+                  class="inline-input"
+                  placeholder="Confirm new password"
+                />
+            </template>
+          </div>
+        </div>
+
+        <div class="menu-item status-row" v-if="editing.password">
+          <span>Email Verification Code</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <template>
+                <input class="inline-input"
+                  type="text"
+                  v-model.trim="reset_pass.email_code"
+                  class="inline-input"
+                  placeholder="Enter email verification code"
+                />
+            </template>
+          </div>
+        </div>
+
+        <div v-if="editing.password">
+          <button class="btn btn-ghost" @click="getemailcode()">Get Email Verification Code</button>
+            <button class="btn" style="float: right;" @click="password_change()">Submit</button>
+        </div>
+
+
+
+    </section>
+    <!--History-->
+    <section class="profile card" v-if="mode ==='history'">
+        <h1>History</h1>
+        <div class="profile">
+            <div v-if="user_history.length === 0">
+              No history available. Try to make your first order!
+            </div>
+            <div v-else>
+              <div>
+                <div v-for="(hist, index) in grouped_user_history" :key="index" style="margin-bottom:30px;">
+                  <div class="merchant card">
+                    <div class="merchant-head">
+                      <h3 class="merchant-name">Order ID: {{ hist.service_id }}</h3>
+                      <span
+                        class="status-pill"
+                        :class="{
+                          'status-pill Red': hist.order_covid_status === 'Red',
+                          'status-pill Yellow': hist.order_covid_status === 'Yellow',
+                          'status-pill Green': hist.order_covid_status === 'Green'
+                        }"
+                      >
+                        Status: {{ hist.order_covid_status }}
+                      </span>
+                    </div>
+                    <h4>Restaurant: {{ hist.provider_name }}</h4>
+                    <p class="merchant-desc">
+                      Contact: {{ hist.provider_email }}  -------- Provider ID: {{ hist.provider_id }}
+                    </p>
+                    <p class="merchant-desc">
+                      Order Time: {{ formatOrderTime(hist.order_timestamp) }}
+                    </p>
+                    <p class="merchant-desc">
+                      From: {{ hist.pickup_address }} --------> To: {{ hist.dropoff_address }}
+                    </p>
+                    <h4>Items:</h4>
+                    <ul class="items">
+                      <li v-for="(it, idx) in hist.items" :key="idx">
+                        <span class="item-name">{{ it.product_name }}</span>
+                        <span class="item-quantity"> ${{ it.price }} x {{ it.quantity }} = ${{ it.price * it.quantity }}</span>
+                      </li>
+                    </ul>
+                    <h4>Total Price: ${{ hist.amount }}</h4>
+                      <p class="merchant-desc">
+                      Payment Method: {{ hist.payment_method }}, Payment Status: {{ hist.payment_status }}.
+                      <button class="btn" style="float: right;"  style="position:relative; z-index:10; cursor:pointer" v-on:click="reportOrder(hist.service_id)">Report This order</button>
+                    </p>
+    
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+    </section>
+    <!--Covid report-->
+    <section class="profile card" v-if="mode ==='covid_report'">
+        <h1>Covid Status
+            <span class="status-pill" :class="user_covid_status">
+              Covid: {{ user_covid_status }}
+            </span>
+        </h1>
+        <div class="profile">
+            <div v-if="user_covid_status === 'Red' || user_covid_status === 'Yellow'">
+              <p>Your Covid status is {{ user_covid_status }}. Please take necessary precautions.</p>
+              <button v-if="user_type === 'admin'" class="btn" @click="reportCovid('Green')">(Admin Only) Switch to Green</button>
+            </div>
+            <div v-else>
+              <p>Your Covid status is Green. Stay safe!</p>
+              <h3>Face any dangerous contacts?</h3>
+              <button class="btn" @click="reportCovid('Red')">Yes, I have been in contact with a confirmed case (Report as Red)</button>
+              <button class="btn" @click="reportCovid('Yellow')">Yes, I have been in contact with a suspected case (Report as Yellow)</button>
+          </div>
+        </div>
+    </section>
+    <!--purchase cart-->
+    <section class="profile card" v-if="mode === 'cart'">
+        <button class="btn" @click="gohome()">Back</button>
+        <h1>Welcome to {{ focused_provider.name }}!</h1>
+        <div class="profile">
+            <div>
+                <ul class="items">
+                    <li v-for="(item, index) in focused_provider.items" :key="index" >
+                      <div class="row">
+                        <span class="item-name">{{ item.name }}: </span>
+                        <span class="item-quantity">
+                          ${{ Number(item.price).toFixed(2) }}
+                          <span v-if="item.status === 'out_of_stock'"> — out of stock</span>
+                        </span>
+                      </div>
+                            <input type="number"
+                                      min="1"
+                                      v-model.number="item.qty"
+                                      :disabled="item.status === 'out_of_stock'"
+                                      style="width:56px;text-align:center;border:1px solid var(--border);border-radius:8px;background:#0f1425;color:white;padding:6px 8px;margin-top:6px;">
+                    </li>
+                </ul>
+                <h4>Total Price: ${{ getTotalPrice() }}</h4>
+                <button class="btn" @click="prepare_checkout()" v-if="!cart_checkout">Proceed to Checkout</button>
+                <div v-if="cart_checkout" class="merchant card">
+                  <h3 class="merchant-name">Checkout</h3>
+                  <p class="merchant-desc">
+                    Please confirm your order details:
+                  </p>
+                  <p class="merchant-desc">
+                    Delivery Address:
+                    <select v-model="delivery_address" class="inline-input">
+                      <option v-for="(addr, index) in user_address" :key="index" :value="addr.id">
+                        {{ addr.address }}, {{ addr.city }}, {{ addr.state }}, {{ addr.postcode }}
+                      </option>
+                    </select>
+                      <button class="btn" href="" @click.prevent="gosetting()">
+                        <span class="menu-icon"></span>
+                        <span>Another Address?</span>
+                      </button>
+                      <div>
+                        <p class="merchant-desc">Payment Method:
+                        <select v-model="payment_method" class="inline-input">
+                          <option value="card" class="inline-input">card</option>
+                          <option value="paypal" class="inline-input">paypal</option>
+                          <option value="cash" class="inline-input">cash</option>
+                        </select>
+                        </p>
+                      </div>
+                      <h2>Total Amount: ${{ getTotalPrice() }}</h2>
+                      <button class="btn" @click="checkout()">Confirm and Pay</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </main>
+  </div>
+</body>
+<script src="/javascripts/user_mainpage.js"></script>
+</html>
