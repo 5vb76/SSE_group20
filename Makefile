@@ -1,8 +1,7 @@
 DB_USER = root
 DB_NAME = covid_service
 SESSION_DB_NAME = gogo
-SQL_FILE = database/database.sql
-MYSQL = /opt/homebrew/opt/mysql@8.4/bin/mysql 
+SQL_FILE = database/database.sql 
 
 .PHONY: init db setup
 
@@ -16,14 +15,14 @@ setup:
 
 init:
 	@echo "Creating database $(DB_NAME) if not exists..."
-	@$(MYSQL) -u $(DB_USER) -p -e "CREATE DATABASE IF NOT EXISTS $(DB_NAME) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+	@mysql -u $(DB_USER) -p -e "CREATE DATABASE IF NOT EXISTS $(DB_NAME) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 	@echo "Database $(DB_NAME) Created!"
 	@echo "Creating database $(SESSION_DB_NAME) if not exists..."
-	@$(MYSQL) -u $(DB_USER) -p -e "CREATE DATABASE IF NOT EXISTS $(SESSION_DB_NAME) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+	@mysql -u $(DB_USER) -p -e "CREATE DATABASE IF NOT EXISTS $(SESSION_DB_NAME) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 	@echo "Database $(SESSION_DB_NAME) Created!"
 	@$(MAKE) db
 
 db:
 	@echo "Importing $(SQL_FILE) into database '$(DB_NAME)' ..."
-	@$(MYSQL) -u $(DB_USER) -p $(DB_NAME) < $(SQL_FILE)
+	@mysql -u $(DB_USER) -p $(DB_NAME) < $(SQL_FILE)
 	@echo "Database imported successfully!"
