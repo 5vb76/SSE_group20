@@ -5,7 +5,7 @@ module.exports = function createSessionMiddleware() {
   const store = new MySQLStore({
     host: "127.0.0.1",
     user: "root",
-    password: "12345678",
+    password: "000000",
     database: "gogo",
     clearExpired: true,
     checkExpirationInterval: 15 * 60 * 1000, // 清理周期
