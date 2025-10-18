@@ -2,70 +2,127 @@ var express = require("express");
 const transporter = require("./mailtest");
 var router = express.Router();
 
-const crypto = require("crypto");
+const {
+  hashPassword,
+  comparePassword,
+  sha256,
+  generateVerificationCode,
+  hashToken,
+} = require("../utils/crypto");
+const {
+  validateInput,
+  validationRules,
+  requireRole,
+} = require("../middleware/security");
 
-function sha256(text) {
-  return crypto.createHash("sha256").update(text).digest("hex");
-}
+// Use secure verification code generator
+const generateResetCode = () => generateVerificationCode(6);
 
-function generateResetCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-}
-
+// Enhanced password validation
 function validatePassword(password) {
-  //todo: varify new password see if it matches the criteria
-  return true;
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return (
+    password.length >= minLength &&
+    hasUpperCase &&
+    hasLowerCase &&
+    hasNumbers &&
+    hasSpecialChar
+  );
 }
 
 router.get("/", function (req, res, next) {
   res.render("index", { title: "Plogin" });
 });
 
-router.post("/login.ajax", function (req, res) {
-  console.log("req.pool is", !!req.pool);
-  var username = req.body.username;
-  var password = req.body.password;
-  //var remember = req.body.remember;
-  var remember = false; // for debugging
-  if (username == "" || password == "") {
-    return res.status(401).json({
-      success: false,
-      message: "Username and password cannot be empty.",
+router.post(
+  "/login.ajax",
+  validateInput([validationRules.email, validationRules.password]),
+  async function (req, res) {
+    console.log("req.pool is", !!req.pool);
+    var username = req.body.email; // Use validated email field
+    var password = req.body.password;
+    var remember = !!req.body.remember;
+    // Input validation is handled by middleware, but keep basic checks
+    if (!username || !password) {
+      return res.status(401).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+    req.pool.getConnection(function (error, connection) {
+      if (error) {
+        console.log(error);
+        return res.sendStatus(500);
+      }
+      const query = "SELECT password_hash FROM provider WHERE email = ?";
+      connection.query(query, username, async function (error, results) {
+        if (error) {
+          connection.release();
+          console.log(error);
+          return res.sendStatus(500);
+        }
+        if (!results || results.length == 0) {
+          connection.release();
+          return res
+            .status(401)
+            .json({ success: false, message: "Invalid username or password." });
+        }
+        const password_hash = results[0].password_hash;
+
+        // Check if it's bcrypt hash (starts with $2a$ or $2b$) or legacy SHA256
+        let isValidPassword = false;
+        if (
+          password_hash.startsWith("$2a$") ||
+          password_hash.startsWith("$2b$")
+        ) {
+          isValidPassword = await comparePassword(password, password_hash);
+        } else {
+          // Legacy SHA256 support
+          isValidPassword = sha256(password) === password_hash;
+        }
+
+        if (isValidPassword) {
+          // Passwords match - regenerate session for security
+          req.session.regenerate(function (err) {
+            if (err) {
+              connection.release();
+              console.log(err);
+              return res.sendStatus(500);
+            }
+
+            req.session.username = username;
+            req.session.isLoggedIn = true;
+            if (remember) {
+              req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 1 day
+            }
+
+            req.session.save(function (err) {
+              connection.release();
+              if (err) {
+                console.log(err);
+                return res.sendStatus(500);
+              }
+              return res
+                .status(200)
+                .json({ success: true, message: "Login successful." });
+            });
+          });
+        } else {
+          // Passwords don't match
+          connection.release();
+          return res
+            .status(401)
+            .json({ success: false, message: "Invalid username or password." });
+        }
+      });
     });
   }
-  req.pool.getConnection(function (error, connection) {
-    if (error) {
-      console.log(error);
-      return res.sendStatus(500);
-    }
-    const query = "SELECT password_hash FROM provider WHERE email = ?";
-    connection.query(query, username, function (error, results) {
-      connection.release();
-      if (!results || results.length == 0) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Invalid username or password." });
-      }
-      const password_hash = results[0].password_hash;
-      if (sha256(password) == password_hash) {
-        // Passwords match
-        req.session.username = username;
-        req.session.isLoggedIn = true;
-        if (remember) {
-          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 1 days
-        }
-        return res
-          .status(200)
-          .json({ success: true, message: "Login successful." });
-      } else {
-        // Passwords don't match
-        return res
-          .status(401)
-          .json({ success: false, message: "Invalid username or password." });
-      }
-    });
-  });
-});
+);
 
 router.post("/forget.ajax", function (req, res) {
   var username = req.body.username;
@@ -163,38 +220,62 @@ router.post("/varify_forget.ajax", function (req, res) {
   });
 });
 
-router.post("/ChangePass.ajax", function (req, res) {
-  var email = req.body.email;
-  var password = req.body.new_password;
-  console.log("req.pool is", !!req.pool);
-  if (!validatePassword(new_password)) {
-    return res.status(403).json({
-      success: false,
-      message: "New password does not meet the criteria",
-    });
-  }
-  var new_password = sha256(password);
+router.post(
+  "/ChangePass.ajax",
+  validateInput([validationRules.email, validationRules.password]),
+  function (req, res) {
+    var email = req.body.email;
+    var password = req.body.new_password;
+    console.log("req.pool is", !!req.pool);
 
-  req.pool.getConnection(function (error, connection) {
-    if (error) {
-      console.log(error);
-      return res.sendStatus(500);
+    if (!validatePassword(password)) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "New password must be at least 8 characters with uppercase, lowercase, number, and special character.",
+      });
     }
-    const query = "UPDATE provider SET password_hash = ? WHERE email = ?;";
-    connection.query(query, [new_password, email], function (error, results) {
-      connection.release();
-      if (results.affectedRows === 1) {
-        return res
-          .status(200)
-          .json({ success: true, message: "Password updated successfully." });
-      } else {
-        return res
-          .status(400)
-          .json({ success: false, message: "Password update failed." });
+
+    req.pool.getConnection(async function (error, connection) {
+      if (error) {
+        console.log(error);
+        return res.sendStatus(500);
+      }
+
+      try {
+        // Hash password with bcrypt
+        const new_password = await hashPassword(password);
+
+        const query = "UPDATE provider SET password_hash = ? WHERE email = ?;";
+        connection.query(
+          query,
+          [new_password, email],
+          function (error, results) {
+            connection.release();
+            if (error) {
+              console.log(error);
+              return res.sendStatus(500);
+            }
+            if (results.affectedRows === 1) {
+              return res.status(200).json({
+                success: true,
+                message: "Password updated successfully.",
+              });
+            } else {
+              return res
+                .status(400)
+                .json({ success: false, message: "Password update failed." });
+            }
+          }
+        );
+      } catch (err) {
+        connection.release();
+        console.log(err);
+        return res.sendStatus(500);
       }
     });
-  });
-});
+  }
+);
 
 router.get("/checkloginstatus.ajax", function (req, res, next) {
   console.log("Checking provider login status...");
