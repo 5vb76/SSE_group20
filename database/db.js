@@ -1,10 +1,15 @@
 const mysql = require("mysql2");
+const config = require("../config/env");
 
 const pool = mysql.createPool({
-  host: "127.0.0.1",
-  user: "root",
-  password: "12345678",
-  database: "covid_service",
+  host: config.database.host,
+  user: config.database.user,
+  password: config.database.password,
+  database: config.database.name,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  connectTimeout: 10000,
 });
 
 pool.getConnection(function (err, connection) {

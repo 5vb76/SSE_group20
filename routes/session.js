@@ -1,29 +1,35 @@
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
+const config = require("../config/env");
 
 module.exports = function createSessionMiddleware() {
   const store = new MySQLStore({
-    host: "127.0.0.1",
-    user: "root",
-    password: "12345678",
-    database: "gogo",
+    host: config.database.host,
+    user: config.database.user,
+    password: config.database.password,
+    database: config.database.sessionName,
     clearExpired: true,
-    checkExpirationInterval: 15 * 60 * 1000, // 清理周期
-    expiration: 24 * 60 * 60 * 1000, // DB层面的过期
+    checkExpirationInterval: 15 * 60 * 1000, // 15 minutes
+    expiration: 24 * 60 * 60 * 1000, // 24 hours
+    createDatabaseTable: true,
+    schema: {
+      tableName: "sessions",
+      columnNames: {
+        session_id: "session_id",
+        expires: "expires",
+        data: "data",
+      },
+    },
   });
 
   return session({
-    secret: process.env.SESSION_SECRET || "REPLACE_WITH_STRONG_SECRET",
+    secret: config.session.secret,
     resave: false,
     saveUninitialized: false,
     store,
     name: "sid",
-    rolling: true, // 用户有请求就刷新过期时间
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // HTTPS 改 true
-      maxAge: 24 * 60 * 60 * 1000, //
-    },
+    rolling: true,
+    cookie: config.session.cookie,
+    genid: () => require("../utils/crypto").generateSessionId(),
   });
 };

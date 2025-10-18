@@ -1,96 +1,196 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
-  <title>Login</title>
-  <link rel="stylesheet" href="/stylesheets/login.css" />
-</head>
-<body>
-  <main class="container">
-    <section id="forms" class="card" role="form" aria-labelledby="title">
-      <!--login form -->
-      <form v-if="mode === 'login'" id="login-form" autocomplete="on" novalidate>
-        <h1 id="title" class="title">Provider Login</h1>
-        <p class="subtitle">Please Enter Your Email and Password</p>
-        <div class="field">
-          <label class="label" for="email">Email</label>
-          <div class="input-wrap">
-            <input id="email" name="email" type="email" v-model="username" placeholder="you@example.com" required />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <title>Login</title>
+    <link rel="stylesheet" href="/stylesheets/login.css" />
+  </head>
+  <body>
+    <main class="container">
+      <section id="forms" class="card" role="form" aria-labelledby="title">
+        <!--login form -->
+        <form
+          v-if="mode === 'login'"
+          id="login-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 id="title" class="title">Provider Login</h1>
+          <p class="subtitle">Please Enter Your Email and Password</p>
+          <div class="field">
+            <label class="label" for="email">Email</label>
+            <div class="input-wrap">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                v-model="username"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label class="label" for="password">Password</label>
-          <div class="input-wrap">
-            <input id="password" name="password" type="password" v-model="password" placeholder="••••••••" required minlength="6" />
-            <button type="button" id="togglePwd" class="toggle" aria-label="Display Password" v-on:click="show()">Show</button>
+          <div class="field">
+            <label class="label" for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                v-model="password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="toggle"
+                aria-label="Display Password"
+                v-on:click="show()"
+              >
+                Show
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div class="row">
-          <label><input type="checkbox" id="remember" v-model="remember"/> Remember Me</label>
-          <a href="#" id="forgot" v-on:click.prevent="switchToForget">Forget Password?</a>
-        </div>
-
-        <button id="submitBtn" class="btn" type="button" v-on:click="login()">Login</button>
-        <div class="row">
-          <a href="#" id="forgot" onclick="window.location.href='/signup.html'">Sign up?</a>
-        </div>
-      </form>
-      <!--forget form -->
-      <form v-if="mode === 'forget'" id="forget-form" autocomplete="on" novalidate>
-        <h1 class="title">Reset Password</h1>
-        <p class="subtitle">Enter your email to receive reset link</p>
-
-        <div class="field">
-          <label class="label" for="resetEmail">Email</label>
-          <div class="input-wrap">
-            <input id="resetEmail" name="resetEmail" type="email" v-model="resetEmail" placeholder="you@example.com" required />
+          <div class="row">
+            <label
+              ><input type="checkbox" id="remember" v-model="remember" />
+              Remember Me</label
+            >
+            <a href="#" id="forgot" v-on:click.prevent="switchToForget"
+              >Forget Password?</a
+            >
           </div>
-        </div>
 
-        <div class="field" v-if="reset_send">
-          <label class="label" for="Enter Code">Reset Code</label>
-          <div class="input-wrap">
-            <input id="resetCode" name="resetCode" type="email" v-model="resetCode" placeholder="" required />
+          <button id="submitBtn" class="btn" type="button" v-on:click="login()">
+            Login
+          </button>
+          <div class="row">
+            <a href="#" id="forgot" v-on:click.prevent="goToSignup">Sign up?</a>
           </div>
-        </div>
+        </form>
+        <!--forget form -->
+        <form
+          v-if="mode === 'forget'"
+          id="forget-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 class="title">Reset Password</h1>
+          <p class="subtitle">Enter your email to receive reset link</p>
 
-        <div class="row">
-          <a href="#" v-on:click.prevent="switchToLogin">Back to Login</a>
-        </div>
-
-        <button v-if="!reset_send" id="resetBtn" class="btn" type="button" v-on:click="sendReset()">Send Reset Code</button>
-        <button v-if="reset_send" id="changeresetBtn" class="btn" type="button" v-on:click="ChangetoReset()">Reset Password</button>
-        <p class="hint" role="status">{{ hint }}</p>
-      </form>
-
-      <!--reset form -->
-      <form v-if="mode === 'ChangePass'" id="change-form" autocomplete="on" novalidate>
-        <h1 id="title" class="title">Reset Password</h1>
-        <p class="subtitle">Please Enter Your New Password, more than 6 chars</p>
-        <div class="field">
-          <label class="label" for="password">New Password</label>
-          <div class="input-wrap">
-            <input id="password1" name="password" type="text" v-model="new_password" placeholder="••••••••" required minlength="6" />
+          <div class="field">
+            <label class="label" for="resetEmail">Email</label>
+            <div class="input-wrap">
+              <input
+                id="resetEmail"
+                name="resetEmail"
+                type="email"
+                v-model="resetEmail"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label class="label" for="password">Confirm Password</label>
-          <div class="input-wrap">
-            <input id="password2" name="password" type="text" v-model="confirm_password" placeholder="••••••••" required minlength="6" />
+          <div class="field" v-if="reset_send">
+            <label class="label" for="Enter Code">Reset Code</label>
+            <div class="input-wrap">
+              <input
+                id="resetCode"
+                name="resetCode"
+                type="email"
+                v-model="resetCode"
+                placeholder=""
+                required
+              />
+            </div>
           </div>
-        </div>
-        <button id="submitBtn" class="btn" type="button" v-on:click="ChangePassword()">Change Password</button>
-        <div class="row">
-          <a href="#" v-on:click.prevent="switchToLogin">Go to Login</a>
-        </div>
-      </form>
-    </section>
-  </main>
-  <script src="/javascripts/provider_login.js"></script>
-</body>
+
+          <div class="row">
+            <a href="#" v-on:click.prevent="switchToLogin">Back to Login</a>
+          </div>
+
+          <button
+            v-if="!reset_send"
+            id="resetBtn"
+            class="btn"
+            type="button"
+            v-on:click="sendReset()"
+          >
+            Send Reset Code
+          </button>
+          <button
+            v-if="reset_send"
+            id="changeresetBtn"
+            class="btn"
+            type="button"
+            v-on:click="ChangetoReset()"
+          >
+            Reset Password
+          </button>
+          <p class="hint" role="status">{{ hint }}</p>
+        </form>
+
+        <!--reset form -->
+        <form
+          v-if="mode === 'ChangePass'"
+          id="change-form"
+          autocomplete="on"
+          novalidate
+        >
+          <h1 id="title" class="title">Reset Password</h1>
+          <p class="subtitle">
+            Please Enter Your New Password, more than 6 chars
+          </p>
+          <div class="field">
+            <label class="label" for="password">New Password</label>
+            <div class="input-wrap">
+              <input
+                id="password1"
+                name="password"
+                type="text"
+                v-model="new_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="password">Confirm Password</label>
+            <div class="input-wrap">
+              <input
+                id="password2"
+                name="password"
+                type="text"
+                v-model="confirm_password"
+                placeholder="••••••••"
+                required
+                minlength="6"
+              />
+            </div>
+          </div>
+          <button
+            id="submitBtn"
+            class="btn"
+            type="button"
+            v-on:click="ChangePassword()"
+          >
+            Change Password
+          </button>
+          <div class="row">
+            <a href="#" v-on:click.prevent="switchToLogin">Go to Login</a>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="/javascripts/provider_login.js"></script>
+  </body>
 </html>
