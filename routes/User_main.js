@@ -98,7 +98,6 @@ router.get("/getProvider.ajax", function (req, res) {
 });
 
 router.get("/getuserinfo.ajax", function (req, res, next) {
-  //console.log('req.pool is', !!req.pool);
   if (!req.session.isLoggedIn) {
     return res.status(401).json({ success: false, message: "Not logged in." });
   }
@@ -110,7 +109,6 @@ router.get("/getuserinfo.ajax", function (req, res, next) {
     }
     const query = "SELECT * FROM users WHERE user_id = ?";
     connection.query(query, userId, function (error, results) {
-      //connection.release();
       if (error) {
         console.log(error);
         return res.sendStatus(500);
@@ -161,7 +159,6 @@ router.get("/check_user_covid_status", function (req, res) {
             LIMIT 1;
         `;
     connection.query(query, [userId], function (error, results) {
-      //connection.release();
       if (error) {
         console.log(error);
         return res.sendStatus(500);
@@ -457,7 +454,6 @@ router.get("/getemailcode", function (req, res) {
   const user_email = req.session.user.email;
   console.log("Requesting email code for user:", userId, user_email);
   const resetCode = generateResetCode();
-  // todo: integrate email service to send the reset code to user's email
   const mailinfo = {
     from: "'SSE_G20 service' <dahaomailp2@gmail.com",
     to: user_email,

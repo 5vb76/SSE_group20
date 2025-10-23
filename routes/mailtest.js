@@ -1,7 +1,6 @@
 const nodemailer = require("nodemailer");
 const config = require("../config/env");
 
-// 这个是我的gmail，最好不要发太多邮件，不然会被谷歌封
 const transporter = nodemailer.createTransport({
   host: config.email.host,
   port: config.email.port,

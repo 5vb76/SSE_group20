@@ -21,6 +21,10 @@ var vueinst = new Vue({
     provider_search: [],
     focused_provider: -1,
 
+    // search
+    search_query: "",
+    filtered_provider: [],
+
     editing: {
       username: false,
       address_id: false,
@@ -375,7 +379,6 @@ var vueinst = new Vue({
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(xhttp.responseText);
           ptr.user_history = data.history;
-          //console.log(ptr.user_history);
           ptr.group_up_user_history();
         } else if (this.readyState == 4 && this.status == 401) {
           console.log("Failed to load user history");
@@ -503,8 +506,9 @@ var vueinst = new Vue({
       xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
           console.log("Provider data loaded");
-          //解析json进入provider[]
+          //parse json into provider[]
           ptr.provider = JSON.parse(xhttp.responseText);
+          ptr.filtered_provider = ptr.provider; // initialize filtered list
           console.log(ptr.provider);
         } else if (this.readyState == 4 && this.status == 401) {
           console.log("Failed to load provider data");
@@ -513,6 +517,31 @@ var vueinst = new Vue({
       xhttp.open("GET", "/User_main/getProvider.ajax", true);
       xhttp.setRequestHeader("Content-type", "application/json");
       xhttp.send();
+    },
+    Search() {
+      // execute search filter
+      this.filterProviders();
+    },
+    filterProviders() {
+      if (!this.search_query) {
+        // if search box is empty, show all provider
+        this.filtered_provider = this.provider;
+      } else {
+        // filter provider by search keyword
+        this.filtered_provider = this.provider.filter(
+          function (provider) {
+            return (
+              provider.name.toLowerCase().includes(this.search_query) ||
+              (provider.description &&
+                provider.description.toLowerCase().includes(this.search_query))
+            );
+          }.bind(this)
+        );
+      }
+    },
+    clearSearch() {
+      this.search_query = "";
+      this.filterProviders();
     },
     isBlocked: function (status) {
       if (status === "Red" || status === "Yellow") {

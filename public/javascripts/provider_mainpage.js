@@ -1,9 +1,6 @@
-// provider_mainpage.js
-
-const API_PREFIXES_PROVIDER = ["/provider_main", "/Provider_main"];
 const API_PREFIXES_LOGIN = ["/plogin", "/Plogin"];
 
-/** 逐一尝试候选 URL，返回 JSON；仅 200 视为成功，401 抛出明确错误 */
+/** try each candidate URL, return JSON; only 200 is considered successful, 401 throws an explicit error */
 async function tryFetchJSON(method, urlCandidates, payload) {
   let lastErr;
   for (const url of urlCandidates) {

@@ -38,7 +38,7 @@ const securityHeaders = helmet({
       "img-src": ["'self'", "data:", "https:"],
       "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
 
-      // Vue standalone 在 CSP 下需要 'unsafe-eval'
+      // Vue standalone need 'unsafe-eval' in CSP
       "script-src": isProd
         ? ["'self'", "https://cdn.jsdelivr.net"]
         : [
@@ -56,12 +56,13 @@ const securityHeaders = helmet({
             "https://cdn.jsdelivr.net",
           ],
 
-      // 严格禁止内联事件属性（生产安全）
+      // Strictly prohibit inline event attributes (production security)
       "script-src-attr": ["'none'"],
     },
   },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
 });
+
 // Input validation middleware
 const validateInput = (validations) => {
   return async (req, res, next) => {
@@ -88,13 +89,11 @@ const validationRules = {
 
   password: body("password")
     .isLength({ min: 6 })
-    // this is the original password validation rules, but it is too strict for the user, so we change it to 6 characters
-    // .withMessage("Password must be at least 6 characters")
-    // .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    // .withMessage(
-    //   "Password must contain at least one lowercase letter, one uppercase letter, and one number"
-    // ),
-    .withMessage("Password must be at least 6 characters"),
+    .withMessage("Password must be at least 6 characters")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "Password must contain at least one lowercase letter, one uppercase letter, and one number"
+    ),
 
   username: body("username")
     .isLength({ min: 2, max: 50 })
@@ -164,13 +163,24 @@ const requireRole = (roles) => {
         .json({ success: false, message: "Authentication required" });
     }
 
-    const userRole =
-      req.session.user?.user_type || req.session.username
-        ? "provider"
-        : "customer";
+    // Determine user role based on session data
+    let userRole = "customer"; // default
+
+    if (req.session.user?.user_type) {
+      // For customer login
+      userRole = req.session.user.user_type;
+    } else if (req.session.username) {
+      // For provider login
+      userRole = "provider";
+    }
 
     if (!roles.includes(userRole)) {
-      return res.status(403).json({ success: false, message: "Access denied" });
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required roles: ${roles.join(
+          ", "
+        )}, Your role: ${userRole}`,
+      });
     }
 
     next();

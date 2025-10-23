@@ -11,6 +11,7 @@ const {
   speedLimiter,
   securityHeaders,
   sanitizeInput,
+  requireRole,
 } = require("./middleware/security");
 
 var createSessionMiddleware = require("./routes/session");
@@ -48,9 +49,12 @@ app.use((req, res, next) => {
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
-app.use("/provider_main", providerMainRouter);
-app.use("/Provider_main", providerMainRouter);
-app.use("/User_main", usermainRouter);
+// Provider routes - only accessible by providers
+app.use("/provider_main", requireRole(["provider"]), providerMainRouter);
+app.use("/Provider_main", requireRole(["provider"]), providerMainRouter);
+// User routes - only accessible by customers
+app.use("/User_main", requireRole(["customer"]), usermainRouter);
+// Public routes
 app.use("/signup", emailLimiter, signupRouter);
 app.use("/login", emailLimiter, loginRouter);
 app.use("/Plogin", emailLimiter, ploginRouter);

@@ -56,12 +56,19 @@ var vueinst = new Vue({
       var ptr = this;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(xhttp.responseText);
-          alert("Send successful: " + data.message);
-        } else if (this.readyState == 4 && this.status == 401) {
-          const data = JSON.parse(xhttp.responseText);
-          alert("Send fail " + data.message);
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            const data = JSON.parse(xhttp.responseText);
+            alert("Send successful: " + data.message);
+          } else {
+            // Handle all error status codes
+            try {
+              const data = JSON.parse(xhttp.responseText);
+              alert("Send failed: " + data.message);
+            } catch (e) {
+              alert("Send failed: Network error or invalid response");
+            }
+          }
         }
       };
       xhttp.open("POST", "/signup/c_email_varify.ajax", true);
@@ -76,13 +83,20 @@ var vueinst = new Vue({
       var ptr = this;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(xhttp.responseText);
-          alert("registed successful: " + data.message);
-          window.location.href = "/login.html";
-        } else if (this.readyState == 4 && this.status == 401) {
-          const data = JSON.parse(xhttp.responseText);
-          alert("registed fail " + data.message);
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            const data = JSON.parse(xhttp.responseText);
+            alert("Registration successful: " + data.message);
+            window.location.href = "/login.html";
+          } else {
+            // Handle all error status codes
+            try {
+              const data = JSON.parse(xhttp.responseText);
+              alert("Registration failed: " + data.message);
+            } catch (e) {
+              alert("Registration failed: Network error or invalid response");
+            }
+          }
         }
       };
       xhttp.open("POST", "/signup/Cregister.ajax", true);

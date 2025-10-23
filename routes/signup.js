@@ -31,9 +31,7 @@ function validatePassword(password) {
   );
 }
 
-function sendEmail(to, subject, text) {
-  // TODO: integrate nodemailer if needed
-}
+function sendEmail(to, subject, text) {}
 
 router.get("/", function (req, res) {
   res.render("index", { title: "login" });
@@ -90,7 +88,6 @@ router.post("/c_email_varify.ajax", function (req, res) {
       transporter.sendMail(mailinfo, (error) => {
         if (error) {
           console.log("Error sending email:", error);
-          // 不要提前结束流程，让 DB 仍然写入，或按需 return
         }
       });
 
@@ -128,12 +125,10 @@ router.post("/c_email_varify.ajax", function (req, res) {
 
               connection.release();
               console.log("Verification code stored:", emailcode);
-              return res
-                .status(200)
-                .json({
-                  success: true,
-                  message: "A verification code has been sent to your email.",
-                });
+              return res.status(200).json({
+                success: true,
+                message: "A verification code has been sent to your email.",
+              });
             }
           );
         }
@@ -193,12 +188,10 @@ router.post(
 
         if (!results || results.length === 0) {
           connection.release();
-          return res
-            .status(401)
-            .json({
-              success: false,
-              message: "No verification code found or code expired.",
-            });
+          return res.status(401).json({
+            success: false,
+            message: "No verification code found or code expired.",
+          });
         }
 
         if (results[0].email_code !== varifyEmailCode) {
@@ -230,12 +223,10 @@ router.post(
                 connection.release();
                 if (error) {
                   console.log(error);
-                  return res
-                    .status(504)
-                    .json({
-                      success: false,
-                      message: "Database insert error.",
-                    });
+                  return res.status(504).json({
+                    success: false,
+                    message: "Database insert error.",
+                  });
                 }
                 return res
                   .status(200)
@@ -333,12 +324,10 @@ router.post("/p_email_varify.ajax", function (req, res) {
               }
               connection.release();
               console.log("Verification code stored:", emailcode);
-              return res
-                .status(200)
-                .json({
-                  success: true,
-                  message: "A verification code has been sent to your email.",
-                });
+              return res.status(200).json({
+                success: true,
+                message: "A verification code has been sent to your email.",
+              });
             }
           );
         }
@@ -407,12 +396,10 @@ router.post(
 
         if (!results || results.length === 0) {
           connection.release();
-          return res
-            .status(401)
-            .json({
-              success: false,
-              message: "No verification code found or code expired.",
-            });
+          return res.status(401).json({
+            success: false,
+            message: "No verification code found or code expired.",
+          });
         }
 
         if (results[0].email_code !== varifyEmailCode) {
@@ -422,7 +409,6 @@ router.post(
             .json({ success: false, message: "Invalid verification code." });
         }
 
-        // ok
         hashPassword(password).then((password_hash) => {
           const uquery =
             "UPDATE provider SET name = ?, password_hash = ?, user_type = 'provider' WHERE email = ?";
@@ -447,12 +433,10 @@ router.post(
                   if (error) {
                     console.log(error);
                     connection.release();
-                    return res
-                      .status(504)
-                      .json({
-                        success: false,
-                        message: "Database insert error.",
-                      });
+                    return res.status(504).json({
+                      success: false,
+                      message: "Database insert error.",
+                    });
                   }
 
                   const cquery =
@@ -461,20 +445,16 @@ router.post(
                     connection.release();
                     if (error) {
                       console.log(error);
-                      return res
-                        .status(504)
-                        .json({
-                          success: false,
-                          message: "Database insert error.",
-                        });
-                    }
-                    return res
-                      .status(200)
-                      .json({
-                        success: true,
-                        message: "Registration successful.",
-                        redirectUrl: "/provider_login.html",
+                      return res.status(504).json({
+                        success: false,
+                        message: "Database insert error.",
                       });
+                    }
+                    return res.status(200).json({
+                      success: true,
+                      message: "Registration successful.",
+                      redirectUrl: "/provider_login.html",
+                    });
                   });
                 }
               );

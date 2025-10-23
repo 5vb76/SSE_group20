@@ -97,10 +97,6 @@ var vueinst = new Vue({
           ptr.reset_send = true;
           ptr.hint = "Please Enter Reset Code within 15 mins.";
           console.log("send code!");
-          // prevent alert takes effect after DOM update
-          // this.$nextTick(() => {
-          //     alert("Please check your email");
-          // });
         } else if (this.readyState == 4 && this.status == 401) {
           const data = JSON.parse(xhttp.responseText);
           alert("No such Account, Please try again");
