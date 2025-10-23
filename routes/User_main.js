@@ -262,21 +262,81 @@ router.post("/report_covid", function (req, res) {
 });
 
 // When a user reports Red, set related providers (ongoing orders) to Yellow,
-// and mark those orders' covid status as Yellow
+// and mark those orders' covid status as Red
 router.get("/change_relevant_covid", function (req, res) {
   if (!req.session.isLoggedIn) {
     return res.status(401).json({ success: false, message: "Not logged in." });
   }
   const userId = req.session.user.id;
-  req.pool.getConnection(function (error, connection) {
+  const covid_status = req.session.user.covid_status;
+  if (covid_status === "Green") {
+    // change all changed to Green
+    req.pool.getConnection(function (error, connection) {
+      if (error) {
+        console.log(error);
+        connection.release();
+        return res.sendStatus(500); 
+      }
+      const query = `SELECT id, state_name, contact_time FROM users_covid_status WHERE user_id = ? ORDER BY id DESC LIMIT 1 OFFSET 1;`
+      connection.query(query, [userId], function (err, result) {
+        //connection.release();
+        if (err) {
+          console.log(err);
+          return res.sendStatus(500);
+        }
+        if (result[0].state_name == "Green" || result[0].state_name == "Yellow") {
+          connection.release();
+          return res.status(200).json({ success: true, message: "No need to update providers, previous status is Green or Yellow." });
+        }
+        const findprovider = `SELECT DISTINCT id, provider_id FROM providers_covid_status WHERE contact_time = ?`
+        connection.query(findprovider, [result[0].contact_time], function (err, results) {
+          if (err) {
+            console.log(err);
+            connection.release();
+            return res.sendStatus(501);
+          }
+          if (results.length == 0) {
+            connection.release();
+            return res.status(200).json({ success: true, message: "No relevant providers found." });
+          }
+
+          const vals = results.map((r) => r.id);
+          const providerIds = results.map((r) => r.provider_id);
+          const insSql = `DELETE FROM providers_covid_status WHERE id IN (?)`;
+          connection.query(insSql, [vals], function (err, result2) {
+            if (err) {
+              console.log(err);
+              connection.release();
+              return res.sendStatus(501);
+            }
+            //update history as well.
+            const updSql = `UPDATE delivery_service SET order_covid_status='Green' WHERE customer_id = ? AND provider_id IN (?)`;
+            connection.query(updSql, [userId, providerIds], function (err) {
+              if (err) { console.log(err); }
+              connection.release();
+              return res.status(200).json({ success: true, message: "Providers updated to Green." });
+            });
+
+          });
+        });
+      });
+    });
+  }
+  else if (covid_status === "Yellow") {
+    return res.status(200).json({ success: true, message: "No need to update providers, status is Yellow." });
+  }
+  else{
+    // change related providers to Yellow
+    req.pool.getConnection(function (error, connection) {
     if (error) {
       console.log(error);
       return res.sendStatus(500);
     }
+    // fix: should be recent 14 days, not ongoing.
     const findSql = `SELECT DISTINCT p.user_id, p.name, p.email
                          FROM delivery_service ds
                          JOIN provider p ON ds.provider_id = p.user_id
-                         WHERE ds.customer_id = ? AND ds.order_status = 'ongoing'`;
+                         WHERE ds.customer_id = ? AND ds.order_timestamp >= NOW() - INTERVAL 14 DAY`;
     connection.query(findSql, [userId], function (err, rows) {
       if (err) {
         connection.release();
@@ -297,8 +357,8 @@ router.get("/change_relevant_covid", function (req, res) {
       connection.query(insSql, [vals], function (e2) {
         if (e2)
           console.log("insert providers_covid_status warning:", e2.message);
-        // Orders for this user become Red (exposed), counterpart provider turns Yellow above
-        const updSql = `UPDATE delivery_service SET order_covid_status='Red' WHERE customer_id = ? AND order_status='ongoing'`;
+        // Orders for this user become Yellow (exposed), counterpart provider turns Yellow above
+        const updSql = `UPDATE delivery_service SET order_covid_status='Yellow' WHERE customer_id = ? AND order_timestamp >= NOW() - INTERVAL 14 DAY`;
         connection.query(updSql, [userId], function (e3) {
           connection.release();
           if (e3) console.log("update delivery_service warning:", e3.message);
@@ -315,6 +375,8 @@ router.get("/change_relevant_covid", function (req, res) {
       });
     });
   });
+
+  }
 });
 
 router.post("/email_change", function (req, res) {

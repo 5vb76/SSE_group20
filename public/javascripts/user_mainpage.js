@@ -18,6 +18,7 @@ var vueinst = new Vue({
 
     // cart
     provider: [],
+    provider_search: [],
     focused_provider: -1,
 
     // search
@@ -42,6 +43,8 @@ var vueinst = new Vue({
     },
     reset_pass: { password: "", confirm_password: "", email_code: "" },
     add_addr: { address: "", city: "", state: "", postcode: "" },
+
+    search_query: "",
   },
   created: function () {
     this.checkLoginStatus();
@@ -229,6 +232,26 @@ var vueinst = new Vue({
       this.mode = "covid_report";
       this.getUserInfo();
     },
+    search(){
+        var ptr = this;
+        if(!this.search_query){
+            alert("Search query cannot be empty.");
+            return;
+        }
+        ptr.provider_search = ptr.provider.map(function (prov) {
+            let found = false;
+            if (prov.items && Array.isArray(prov.items)) {
+                found = prov.items.some(function (item) {
+                    return (
+                        typeof item.name === "string" &&
+                        item.name.toLowerCase().includes(ptr.search_query.toLowerCase())
+                    );
+                });
+            }
+            return { ...prov, found };
+        });
+        console.log(ptr.provider_search);
+    },
     gohome() {
       this.mode = "shops";
       this.getProvider();
@@ -243,6 +266,11 @@ var vueinst = new Vue({
     },
     gohistory() {
       this.mode = "history";
+      this.get_user_history();
+    },
+    gosearch(){
+        this.mode = "search";
+        this.search();
     },
     check_usercovid_status() {
       var ptr = this;
@@ -287,7 +315,7 @@ var vueinst = new Vue({
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(xhttp.responseText);
           console.log("Relevant orders' covid status updated: " + data.message);
-          var names = (data.affected_providers || [])
+          /*var names = (data.affected_providers || [])
             .map(function (p) {
               return p.name;
             })
@@ -298,7 +326,7 @@ var vueinst = new Vue({
             );
           } else {
             alert("User reported Red; no ongoing providers to update.");
-          }
+          }*/
         }
       };
       xhttp.open("GET", "/User_main/change_relevant_covid", true);
@@ -423,10 +451,14 @@ var vueinst = new Vue({
         alert("Please select a delivery address.");
         return;
       }
+      var dropoff_address_id = this.user_address.find(
+        (addr) => addr.id === this.delivery_address
+      );
+      var dropoff_address = dropoff_address_id.address + ", " + dropoff_address_id.city + ", " + dropoff_address_id.state + ", " + dropoff_address_id.postcode;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
-          alert("Checkout successful!");
+          alert("Checkout successful!, address: " + dropoff_address);
           ptr.cart_checkout = false;
           ptr.mode = "shops";
           ptr.focused_provider = -1;
@@ -438,7 +470,7 @@ var vueinst = new Vue({
       xhttp.send(
         JSON.stringify({
           payment_method: this.payment_method,
-          dropoff_address: this.delivery_address,
+          dropoff_address: dropoff_address,
           cart: cart,
           provider_id: this.focused_provider.id,
           amount: this.getTotalPrice(),

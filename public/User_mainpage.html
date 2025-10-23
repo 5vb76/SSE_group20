@@ -62,6 +62,55 @@
           </a>
         </nav>
       </aside>
+    <!-- main area -->
+    <main class="main">
+      <!-- top title -->
+      <header class="topbar">
+        <div class="site-title">GOGO Delivery</div>
+        <div class="top-actions">
+          <input class="search" type="text" placeholder="Search for Products...." v-model="search_query"/>
+          <button class="btn" v-on:click="gosearch()">Search</button>
+        </div>
+      </header>
+      <!-- Search card -->
+       <div v-if="mode ==='search'">
+        <h4>Search Results for "{{ search_query }}"
+          <button class="btn" @click="gohome()">Back</button>
+        </h4>
+       </div>
+      <section class="merchant-grid" v-if="mode ==='search'">
+        <article v-for="p in provider_search" :key="p.id" class="merchant card" v-if="p.found === true">
+          <div class="merchant-head">
+            <h3 class="merchant-name">{{ p.name }}</h3>
+            <span class="status-pill" :class="p.covid_status">
+              Covid: {{ p.covid_status }}
+            </span>
+          </div>
+
+          <p class="merchant-desc">
+            {{ p.description || 'No description' }}
+          </p>
+
+          <ul class="items">
+            <li v-for="(it, idx) in (p.items || []).slice(0, 3)" :key="idx">
+              <span class="item-name" v-if="it.status === 'available'">{{ it.name }}</span>
+              <span class="item-name" v-if="it.status === 'out_of_stock'">{{ it.name }} ---- Out of Stock</span>
+              <span class="item-price">${{ it.price }}</span>
+            </li>
+            <li v-if="!p.items || p.items.length === 0">
+              <span class="item-name">No Product at this time, sorry</span>
+              <span class="item-price">—</span>
+            </li>
+          </ul>
+
+          <div class="merchant-actions">
+            <button style="margin-top: 8px;" class="btn" :disabled="isBlocked(p.covid_status)" v-on:click="viewProvider(p.id)">
+            {{ isBlocked(p.covid_status) ? 'Cannot Order now' : 'Purchase' }}
+            </button>
+          </div>
+        </article>
+
+      </section>
 
       <!-- main area -->
       <main class="main">
