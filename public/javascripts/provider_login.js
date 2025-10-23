@@ -41,7 +41,7 @@ var vueinst = new Vue({
       xhttp.setRequestHeader("Content-type", "application/json");
       xhttp.send(
         JSON.stringify({
-          username: this.username,
+          email: this.username,
           password: this.password,
           remember: this.remember,
         })
@@ -64,6 +64,9 @@ var vueinst = new Vue({
       this.mode = "login";
       this.hint = "Eenter your email and password to log in.";
       this.clearinput();
+    },
+    goToSignup() {
+      window.location.href = "/signup.html";
     },
     sendReset() {
       const ptr = this;

@@ -1,303 +1,489 @@
-var express = require('express');
-const transporter = require('./mailtest');
+var express = require("express");
+const transporter = require("./mailtest");
 var router = express.Router();
 
-const crypto = require('crypto');
+const {
+  hashPassword,
+  comparePassword,
+  sha256,
+  generateVerificationCode,
+  hashToken,
+} = require("../utils/crypto");
+const { validateInput, validationRules } = require("../middleware/security");
 
-function sha256(text) {
-  return crypto.createHash('sha256').update(text).digest('hex');
-}
+// Use secure verification code generator
+const generateResetCode = () => generateVerificationCode(6);
 
-function generateResetCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-}
-
+// Enhanced password validation
 function validatePassword(password) {
-    //todo: varify new password see if it matches the criteria
-    return true;
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return (
+    password.length >= minLength &&
+    hasUpperCase &&
+    hasLowerCase &&
+    hasNumbers &&
+    hasSpecialChar
+  );
 }
 
 function sendEmail(to, subject, text) {
-    //todo: integrate email service to send email: nodemailer
+  // TODO: integrate nodemailer if needed
 }
 
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'login' });
+router.get("/", function (req, res) {
+  res.render("index", { title: "login" });
 });
 
-router.post('/c_email_varify.ajax', function(req, res) {
-  console.log('req.pool is', !!req.pool);
-  var email = req.body.user_email;
+/**
+ * Customer email verify – send code & create pending user
+ */
+router.post("/c_email_varify.ajax", function (req, res) {
+  console.log("req.pool is", !!req.pool);
+  const email = req.body.user_email;
 
-  if(email == ''){
-    return res.status(401).json({ success: false, message: 'email cannot be empty.' });
+  if (!email) {
+    return res
+      .status(401)
+      .json({ success: false, message: "email cannot be empty." });
   }
-   req.pool.getConnection(function(error, connection) {
+
+  req.pool.getConnection(function (error, connection) {
+    if (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Database connection error." });
+    }
+    const query = "SELECT * FROM users WHERE email = ?";
+    connection.query(query, [email], function (error, results) {
+      if (error) {
+        console.log(error);
+        connection.release();
+        return res
+          .status(501)
+          .json({ success: false, message: "Database query error." });
+      }
+
+      if (results && results.length > 0 && results[0].user_type !== "pending") {
+        connection.release();
+        return res
+          .status(401)
+          .json({ success: false, message: "Email is already registered." });
+      }
+
+      // means new email
+      const emailcode = generateResetCode();
+
+      const mailinfo = {
+        from: '"SSE_G20 service" <dahaomailp2@gmail.com>',
+        to: email,
+        subject: "New Account Register Code",
+        text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
+        html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`,
+      };
+
+      transporter.sendMail(mailinfo, (error) => {
         if (error) {
-            console.log(error);
-            return res.sendStatus(500).json({ success: false, message: 'Database connection error.' });
+          console.log("Error sending email:", error);
+          // 不要提前结束流程，让 DB 仍然写入，或按需 return
         }
-        const query = 'SELECT * FROM users WHERE email = ?';
-        connection.query(query, email, function(error, results) {
-            if (error) {
+      });
+
+      // insert a new user with pending status
+      const iquery =
+        "INSERT INTO users (name, email, password_hash, user_type) VALUES (?, ?, ?, 'pending')";
+      connection.query(
+        iquery,
+        ["pending", email, "pending"],
+        function (error, insertRes) {
+          if (error) {
+            console.log(error);
+            connection.release();
+            return res
+              .status(501)
+              .json({ success: false, message: "Database insert error." });
+          }
+
+          const user_id = insertRes.insertId;
+
+          // store the code to the database
+          const insertQuery =
+            "INSERT INTO Email_History (user_id, email_code, email_type) VALUES (?, ?, ?)";
+          connection.query(
+            insertQuery,
+            [user_id, emailcode, "registration"],
+            function (error) {
+              if (error) {
                 console.log(error);
                 connection.release();
-                return res.sendStatus(501).json({ success: false, message: 'Database query error.' });
-            }
-            if(results && results.length > 0 && results[0].user_type != 'pending'){
-                connection.release();
-                return res.status(401).json({ success: false, message: 'Email is already registered.' });        
-            }
-        });
-                //means new email
-                var emailcode = generateResetCode();
-                //todo: send email code to the email address
+                return res
+                  .status(503)
+                  .json({ success: false, message: "Database insert error." });
+              }
 
-                const mailinfo = {
-                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
-                    to: email,
-                    subject: 'New Account Register Code',
-                    text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
-                    html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`
-                };
-
-                transporter.sendMail(mailinfo, (error, info) => {
-                    if (error) {
-                        console.log('Error sending email:', error);
-                        return res.sendStatus(500);
-                    }
+              connection.release();
+              console.log("Verification code stored:", emailcode);
+              return res
+                .status(200)
+                .json({
+                  success: true,
+                  message: "A verification code has been sent to your email.",
                 });
-
-                //insert a new user with pending status
-                const iquery = "INSERT INTO users (name, email, password_hash, user_type) VALUES (?, ?, ?, 'pending')";
-                connection.query(iquery, ['pending', email, 'pending'], function(error, results) {
-                    if (error) {
-                        console.log(error);
-                        return res.status(501).json({ success: false, message: 'Database insert error.' });
-                    }
-
-                    var user_id = results.insertId;
-
-                    //store the code to the database
-                    const insertQuery = 'INSERT INTO Email_History (user_id, email_code, email_type) VALUES (?, ?, ?)';
-                    connection.query(insertQuery, [user_id, emailcode, 'registration'], function(error, results) {
-                        if (error) {
-                            console.log(error);
-                            return res.status(503).json({ success: false, message: 'Database insert error.' });
-                        }
-                        connection.release();
-                        console.log('Verification code stored:', emailcode);
-                        return res.status(200).json({ success: true, message: 'A verification code has been sent to your email.' });
-                    });
-            });
-
+            }
+          );
+        }
+      );
     });
-
+  });
 });
 
-router.post('/Cregister.ajax', function(req, res){
-    var username = req.body.user_name;
-    var email = req.body.user_email;
-    var password = req.body.user_password;
-    var varifyEmailCode = req.body.varifyEmailCode;
+/**
+ * Customer register with code
+ */
+router.post(
+  "/Cregister.ajax",
+  validateInput([
+    validationRules.username,
+    validationRules.email,
+    validationRules.password,
+  ]),
+  function (req, res) {
+    const username = req.body.user_name;
+    const email = req.body.user_email;
+    const password = req.body.user_password;
+    const varifyEmailCode = req.body.varifyEmailCode;
 
-    console.log('req.pool is', !!req.pool); 
+    console.log("req.pool is", !!req.pool);
 
-    if(username == '' || email == '' || password == '' || varifyEmailCode == ''){
-        return res.status(401).json({ success: false, message: 'All fields are required.' });
-      }
-    if(!validatePassword(password)){
-        return res.status(402).json({ success: false, message: 'Password does not meet the criteria.' });
+    if (!varifyEmailCode) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Verification code is required." });
+    }
+    if (!validatePassword(password)) {
+      return res.status(402).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters with uppercase, lowercase, number, and special character.",
+      });
     }
 
-    req.pool.getConnection(function(error, connection) {
-        if (error) {
-            console.log(error);
-            return res.sendStatus(500);
-        }
-        const query = "SELECT rh.*  FROM Email_History rh  JOIN users u ON rh.user_id = u.user_id  WHERE u.email = ?  AND rh.email_type = 'registration'  AND rh.created_at >= NOW() - INTERVAL 15 MINUTE  ORDER BY rh.id DESC  LIMIT 1;";
-        connection.query(query, email, function(error, results) {
-            if (error) {
-                console.log(error);
-                connection.release();
-                return res.sendStatus(501);
-            }
-            if(!results || results.length == 0){
-                connection.release();
-                return res.status(401).json({ success: false, message: 'No verification code found or code expired.' });        
-            }
-            else if(results[0].email_code == varifyEmailCode){
-                //update the user info
-                var password_hash = sha256(password);
-                const uquery = "UPDATE users SET name = ?, password_hash = ?, user_type = 'customer' WHERE email = ?";
-                connection.query(uquery, [username, password_hash, email], function(error, results) {
-                    //connection.release();
-                    if (error) {
-                        console.log(error);
-                        return res.status(502).json({ success: false, message: 'Database update error.' });
-                    }
-                    //add to users_covid_status table with default green status
-                    const cquery = "INSERT INTO users_covid_status (user_id, state_name) VALUES ((SELECT user_id FROM users WHERE email = ?), 'Green')";
-                    connection.query(cquery, [email], function(error, results) {
-                        connection.release();
-                            if (error) {
-                                console.log(error);
-                                return res.status(504).json({ success: false, message: 'Database insert error.' });
-                            }
-                    });
-
-                    return res.status(200).json({ success: true, message: 'Registration successful.' });
-                });
-            }
-            else{
-                connection.release();
-                return res.status(403).json({ success: false, message: 'Invalid verification code.' });
-            }
-        });
-    });
-});
-
-router.post('/p_email_varify.ajax', function(req, res) {
-    console.log('req.pool is', !!req.pool);
-    var email = req.body.email;
-    if(email == ''){
-        return res.status(401).json({ success: false, message: 'email cannot be empty.' });
+    req.pool.getConnection(function (error, connection) {
+      if (error) {
+        console.log(error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection error." });
       }
-        req.pool.getConnection(function(error, connection) {
+      const query =
+        "SELECT rh.* FROM Email_History rh JOIN users u ON rh.user_id = u.user_id WHERE u.email = ? AND rh.email_type = 'registration' AND rh.created_at >= NOW() - INTERVAL 15 MINUTE ORDER BY rh.id DESC LIMIT 1;";
+      connection.query(query, [email], function (error, results) {
         if (error) {
-            console.log(error);
-            return res.sendStatus(500).json({ success: false, message: 'Database connection error.' });
+          console.log(error);
+          connection.release();
+          return res
+            .status(501)
+            .json({ success: false, message: "Database query error." });
         }
-        const query = 'SELECT * FROM provider WHERE email = ?';
-        connection.query(query, [email], function(error, results) {
-            if (error) {
+
+        if (!results || results.length === 0) {
+          connection.release();
+          return res
+            .status(401)
+            .json({
+              success: false,
+              message: "No verification code found or code expired.",
+            });
+        }
+
+        if (results[0].email_code !== varifyEmailCode) {
+          connection.release();
+          return res
+            .status(403)
+            .json({ success: false, message: "Invalid verification code." });
+        }
+
+        // ok: update user & create covid status
+        hashPassword(password).then((password_hash) => {
+          const uquery =
+            "UPDATE users SET name = ?, password_hash = ?, user_type = 'customer' WHERE email = ?";
+          connection.query(
+            uquery,
+            [username, password_hash, email],
+            function (error) {
+              if (error) {
                 console.log(error);
                 connection.release();
-                return res.sendStatus(501).json({ success: false, message: 'Database query error.' });
-            }
-            if(results && results.length > 0){
+                return res
+                  .status(502)
+                  .json({ success: false, message: "Database update error." });
+              }
+
+              const cquery =
+                "INSERT INTO users_covid_status (user_id, state_name) VALUES ((SELECT user_id FROM users WHERE email = ?), 'Green')";
+              connection.query(cquery, [email], function (error) {
                 connection.release();
-                return res.status(401).json({ success: false, message: 'Email is already registered.' });     
-            }
-
-                //means new email
-        var emailcode = generateResetCode();
-
-        const mailinfo = {
-                    from: "'SSE_G20 service' <dahaomailp2@gmail.com",
-                    to: email,
-                    subject: 'New Account Register Code',
-                    text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
-                    html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`
-                };
-
-                transporter.sendMail(mailinfo, (error, info) => {
-                    if (error) {
-                        console.log('Error sending email:', error);
-                        return res.sendStatus(500);
-                    }
-                });
-
-        const iquery = "INSERT INTO provider (name, email, password_hash, user_type) VALUES (?, ?, ?, ?)";
-        connection.query(iquery, ['pending', email, 'pending', 'pending'], function(error, results) {
-            if (error) {
-                console.log(error);
-                return res.status(501).json({ success: false, message: 'Database insert error.' });
-            }
-            var provider_id = results.insertId;
-
-            //store the code to the database
-            const insertQuery = 'INSERT INTO P_Email_History (provider_id, email_code, email_type) VALUES (?, ?, ?)';
-            connection.query(insertQuery, [provider_id, emailcode, 'registration'], function(error, results) {
                 if (error) {
-                    connection.release();
-                    console.log(error);
-                    return res.status(503).json({ success: false, message: 'Database insert error.' });
+                  console.log(error);
+                  return res
+                    .status(504)
+                    .json({
+                      success: false,
+                      message: "Database insert error.",
+                    });
                 }
-                connection.release();
-                console.log('Verification code stored:', emailcode);
-                return res.status(200).json({ success: true, message: 'A verification code has been sent to your email.' });
-                });
-            });
+                return res
+                  .status(200)
+                  .json({ success: true, message: "Registration successful." });
+              });
+            }
+          );
         });
-            
-    });          
-});    
+      });
+    });
+  }
+);
 
-router.post('/Pregister.ajax', function(req, res){
-    var username = req.body.provider_name;
-    var email = req.body.provider_email;
-    var password = req.body.provider_password;
-    var varifyEmailCode = req.body.provider_varifyEmailCode;
+/**
+ * Provider email verify – send code & create pending provider
+ */
+router.post("/p_email_varify.ajax", function (req, res) {
+  console.log("req.pool is", !!req.pool);
+  const email = req.body.email;
 
-    var address = req.body.provider_address;
-    var city = req.body.provider_city;
-    var state = req.body.provider_state;
-    var postcode = req.body.provider_postcode;
+  if (!email) {
+    return res
+      .status(401)
+      .json({ success: false, message: "email cannot be empty." });
+  }
 
-    console.log('req.pool is', !!req.pool);
-    if(username == '' || email == '' || password == '' || varifyEmailCode == '' || address == ''){
-        return res.status(401).json({ success: false, message: 'All fields are required.' });
-      }
-    if(!validatePassword(password)){
-        return res.status(402).json({ success: false, message: 'Password does not meet the criteria.' });
+  req.pool.getConnection(function (error, connection) {
+    if (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Database connection error." });
     }
-    req.pool.getConnection(function(error, connection) {
+    const query = "SELECT * FROM provider WHERE email = ?";
+    connection.query(query, [email], function (error, results) {
+      if (error) {
+        console.log(error);
+        connection.release();
+        return res
+          .status(501)
+          .json({ success: false, message: "Database query error." });
+      }
+      if (results && results.length > 0) {
+        connection.release();
+        return res
+          .status(401)
+          .json({ success: false, message: "Email is already registered." });
+      }
+
+      // means new email
+      const emailcode = generateResetCode();
+
+      const mailinfo = {
+        from: '"SSE_G20 service" <dahaomailp2@gmail.com>',
+        to: email,
+        subject: "New Account Register Code",
+        text: `Your Account register code is: ${emailcode}. It is valid for 15 minutes.`,
+        html: `<p>Your Account register code is: <b>${emailcode}</b>. It is valid for 15 minutes.</p>`,
+      };
+
+      transporter.sendMail(mailinfo, (error) => {
         if (error) {
-            console.log(error);
-            return res.sendStatus(500);
+          console.log("Error sending email:", error);
         }
-        const query = "SELECT rh.*  FROM P_Email_History rh  JOIN provider p ON rh.provider_id = p.user_id  WHERE p.email = ?  AND rh.email_type = 'registration'  AND rh.created_at >= NOW() - INTERVAL 15 MINUTE  ORDER BY rh.id DESC  LIMIT 1;";
-        connection.query(query, [email], function(error, results) {
-            if (error) {
+      });
+
+      const iquery =
+        "INSERT INTO provider (name, email, password_hash, user_type) VALUES (?, ?, ?, ?)";
+      connection.query(
+        iquery,
+        ["pending", email, "pending", "pending"],
+        function (error, insertRes) {
+          if (error) {
+            console.log(error);
+            connection.release();
+            return res
+              .status(501)
+              .json({ success: false, message: "Database insert error." });
+          }
+
+          const provider_id = insertRes.insertId;
+
+          const insertQuery =
+            "INSERT INTO P_Email_History (provider_id, email_code, email_type) VALUES (?, ?, ?)";
+          connection.query(
+            insertQuery,
+            [provider_id, emailcode, "registration"],
+            function (error) {
+              if (error) {
                 console.log(error);
                 connection.release();
-                return res.sendStatus(501);
-            }
-            if(!results || results.length == 0){
-                connection.release();
-                return res.status(401).json({ success: false, message: 'No verification code found or code expired.' });        
-            }
-            else if(results[0].email_code == varifyEmailCode){
-                //update the user info
-                var password_hash = sha256(password);
-                const uquery = "UPDATE provider SET name = ?, password_hash = ?, user_type = 'provider' WHERE email = ?";
-                connection.query(uquery, [username, password_hash, email], function(error, results) {
-                    //connection.release();
-                    if (error) {
-                        console.log(error);
-                        return res.status(502).json({ success: false, message: 'Database update error.' });
-                    }
-
-                    //add to provider address table
-                    const aquery = "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES ((SELECT user_id FROM provider WHERE email = ?), ?, ?, ?, ?)";
-                    connection.query(aquery, [email, address, city, state, postcode], function(error, results) {
-                        //connection.release();
-                            if (error) {
-                                console.log(error);
-                                return res.status(504).json({ success: false, message: 'Database insert error.' });
-                            }
-                            //add to users_covid_status table with default green status
-                            const cquery = "INSERT INTO providers_covid_status (provider_id, state_name) VALUES ((SELECT user_id FROM provider WHERE email = ?), 'Green')";
-                            connection.query(cquery, [email], function(error, results) {
-                                connection.release();
-                                if (error) {
-                                    console.log(error);
-                                    return res.status(504).json({ success: false, message: 'Database insert error.' });
-                                }
-                            });
-                    });
-                    return res.status(200).json({ success: true, message: 'Registration successful.', redirectUrl: '/provider_login.html' });
+                return res
+                  .status(503)
+                  .json({ success: false, message: "Database insert error." });
+              }
+              connection.release();
+              console.log("Verification code stored:", emailcode);
+              return res
+                .status(200)
+                .json({
+                  success: true,
+                  message: "A verification code has been sent to your email.",
                 });
             }
-            else{
-                connection.release();
-                return res.status(403).json({ success: false, message: 'Invalid verification code.' });
-            }
-
-        });
+          );
+        }
+      );
     });
+  });
 });
 
+/**
+ * Provider register with code + address
+ */
+router.post(
+  "/Pregister.ajax",
+  validateInput([
+    validationRules.businessName,
+    validationRules.email,
+    validationRules.password,
+    validationRules.address,
+    validationRules.city,
+    validationRules.state,
+    validationRules.postcode,
+  ]),
+  function (req, res) {
+    const username = req.body.provider_name;
+    const email = req.body.provider_email;
+    const password = req.body.provider_password;
+    const varifyEmailCode = req.body.provider_varifyEmailCode;
+
+    const address = req.body.provider_address;
+    const city = req.body.provider_city;
+    const state = req.body.provider_state;
+    const postcode = req.body.provider_postcode;
+
+    console.log("req.pool is", !!req.pool);
+
+    if (!varifyEmailCode) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Verification code is required." });
+    }
+    if (!validatePassword(password)) {
+      return res.status(402).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters with uppercase, lowercase, number, and special character.",
+      });
+    }
+
+    req.pool.getConnection(function (error, connection) {
+      if (error) {
+        console.log(error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection error." });
+      }
+      const query =
+        "SELECT rh.* FROM P_Email_History rh JOIN provider p ON rh.provider_id = p.user_id WHERE p.email = ? AND rh.email_type = 'registration' AND rh.created_at >= NOW() - INTERVAL 15 MINUTE ORDER BY rh.id DESC LIMIT 1;";
+      connection.query(query, [email], function (error, results) {
+        if (error) {
+          console.log(error);
+          connection.release();
+          return res
+            .status(501)
+            .json({ success: false, message: "Database query error." });
+        }
+
+        if (!results || results.length === 0) {
+          connection.release();
+          return res
+            .status(401)
+            .json({
+              success: false,
+              message: "No verification code found or code expired.",
+            });
+        }
+
+        if (results[0].email_code !== varifyEmailCode) {
+          connection.release();
+          return res
+            .status(403)
+            .json({ success: false, message: "Invalid verification code." });
+        }
+
+        // ok
+        hashPassword(password).then((password_hash) => {
+          const uquery =
+            "UPDATE provider SET name = ?, password_hash = ?, user_type = 'provider' WHERE email = ?";
+          connection.query(
+            uquery,
+            [username, password_hash, email],
+            function (error) {
+              if (error) {
+                console.log(error);
+                connection.release();
+                return res
+                  .status(502)
+                  .json({ success: false, message: "Database update error." });
+              }
+
+              const aquery =
+                "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES ((SELECT user_id FROM provider WHERE email = ?), ?, ?, ?, ?)";
+              connection.query(
+                aquery,
+                [email, address, city, state, postcode],
+                function (error) {
+                  if (error) {
+                    console.log(error);
+                    connection.release();
+                    return res
+                      .status(504)
+                      .json({
+                        success: false,
+                        message: "Database insert error.",
+                      });
+                  }
+
+                  const cquery =
+                    "INSERT INTO providers_covid_status (provider_id, state_name) VALUES ((SELECT user_id FROM provider WHERE email = ?), 'Green')";
+                  connection.query(cquery, [email], function (error) {
+                    connection.release();
+                    if (error) {
+                      console.log(error);
+                      return res
+                        .status(504)
+                        .json({
+                          success: false,
+                          message: "Database insert error.",
+                        });
+                    }
+                    return res
+                      .status(200)
+                      .json({
+                        success: true,
+                        message: "Registration successful.",
+                        redirectUrl: "/provider_login.html",
+                      });
+                  });
+                }
+              );
+            }
+          );
+        });
+      });
+    });
+  }
+);
 
 module.exports = router;
