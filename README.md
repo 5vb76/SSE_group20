@@ -1,5 +1,5 @@
 # SSE_Group20: GoGo Delivery
-For the course SSE to build a security app for Covid Tracking System.
+For the course SSE to build a security home service app for Covid Tracking System.
 # How to run?
 
 ### Tech Stack
@@ -9,9 +9,9 @@ For the course SSE to build a security app for Covid Tracking System.
 | **Backend Framework** | [Express.js](https://expressjs.com/) |
 | **Database** | MySQL 8.4 |
 | **NPM DB connect** | mysql2 |
-| **Frontend** | HTML + CSS + JS (Vue?) |
+| **Frontend** | HTML + CSS + JS (Vue 2.6) |
 | **Environment** | Node.js |
-| **OS** | Windows / macOS(Is that work?)  |
+| **OS** | Windows / macOS |
 
 ## 1. Prepare environment
 #### 1.1 Install Node.js & npm
@@ -45,46 +45,25 @@ make db
 ```
 
 ## 3.Database Configuration
-You might need to change a few configurations in `database/db.js` to connect DB to pool.
-```
-js
+~~You might need to change a few configurations in `database/db.js` to connect DB to pool.~~
 
-const pool = mysql.createPool({
-  host: '127.0.0.1',                    # You dont need to change it I think...
-  user: 'xxxxxxxx',                     # Your Mysql username, should be the same.
-  password: 'xxxxxxxx',                 # Your password
-  database: 'covid_service',            # The same name as you decided in Step 2.
-});
+~~Also, Session DB config need to change as well, in `routes/session.js`:~~
 
-```
-Also, Session DB config need to change as well, in `routes/session.js`:
+Check the Security.md to set database config in .env file to keep secret.
 
-```
-module.exports = function createSessionMiddleware() {
-  const store = new MySQLStore({
-    host: '127.0.0.1',
-    user: 'root',                            # Your Mysql username, should be the same.
-    password: 'xxxxxxxx',                      # Your password
-    database: 'gogo',
-    clearExpired: true,
-    checkExpirationInterval: 15 * 60 * 1000, # set expiration time,
-    expiration: 24 * 60 * 60 * 1000          # DB overtime
-  });
-```
-
-
-## Version 0.1 Summary
-This Version initializes the full-stack web application for **COVID Service** --  **GOGO delivery** web app Version **0.1**, built using:
+## Version 0.2 Summary
+This Version initializes the full-stack web application for **COVID Service** --  **GOGO delivery** web app Version **0.2**, built using:
 - **Node.js + Express**
 - **MySQL / Node.js mysql2 database**
 - **Vue 2.6 frontend**
 - **Nodemailer** for email verification
 - **Session-based auth** (no JWT): login, session check, logout, and a protected provider API; front-end XHR examples
 - **RESTful routes** for login, password reset, and email handling.
+- **Security Design** for almost all routers, to keep app secured.
 
 ## What’s included
 - **Frontend & Backend**
-  - `index.html`, `login.html`, `signup.html`, `provider_login.html`, `User_mainpage.html` with Vue 2.6 entry `app.js`.
+  - `index.html`, `login.html`, `signup.html`, `provider_login.html`, `User_mainpage.html`, `Provider_mainpage` with Vue 2.6 entry `app.js`, also along with secured middleware.
   - `User_mainpage` Components:
     - Header: site title **GOGO delivery**
     - Sidebar: user greeting + menu items href to (Home/ Profile / Account Setting/ Covid_status/ History/ Signout).
@@ -100,10 +79,11 @@ This Version initializes the full-stack web application for **COVID Service** --
     - **Database Integration**: MySQL schema for users, providers, orders; sample seed data included.
     - **Security**: Input validation, password hashing, and basic error handling.
     - **Documentation**: Makefile, Setup instructions, environment config, and API usage examples in README.
-  - **Ongoing Features**:
+  - **New Features**:
     - **Provider-side Order Management**: Providers can view and update order status.
     - **Covid Status Tracking**: Backend Algorithm for change covid status based on the contacts for both user and providers.
     - **Unit and Integration Tests**: Initial test coverage for core features.
+    - **Also other security designs**: Please check Issue page for further detailes
 
 ## How to Run the App
 1. Make sure you have **MySQL** Version > 8.0 and **npm** installed on your system.
