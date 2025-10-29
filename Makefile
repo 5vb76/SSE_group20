@@ -7,7 +7,7 @@ SQL_FILE = database/database.sql
 
 setup:
 	@echo "Installing project dependencies..."
-	@npm install nodemailer mysql2
+	@npm install nodemailer mysql2 bcryptjs express-rate-limit express-validator helmet express-slow-down
 	@npm install
 	@npm install -g express-generator
 	@npm i express mysql2 express-session express-mysql-session crypto
