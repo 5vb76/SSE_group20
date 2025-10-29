@@ -5,17 +5,37 @@ var router = express.Router();
 const crypto = require("crypto");
 const e = require("express");
 
-function sha256(text) {
-  return crypto.createHash("sha256").update(text).digest("hex");
-}
+const {
+  hashPassword,
+  comparePassword,
+  sha256,
+  generateVerificationCode,
+  hashToken,
+} = require("../utils/crypto");
+const {
+  validateInput,
+  validationRules,
+  requireRole,
+} = require("../middleware/security");
 
-function generateResetCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-}
+// Use secure verification code generator
+const generateResetCode = () => generateVerificationCode(6);
 
+// Enhanced password validation
 function validatePassword(password) {
-  //todo: varify new password see if it matches the criteria
-  return true;
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return (
+    password.length >= minLength &&
+    hasUpperCase &&
+    hasLowerCase &&
+    hasNumbers &&
+    hasSpecialChar
+  );
 }
 
 router.get("/", function (req, res, next) {
@@ -39,7 +59,7 @@ router.get("/checkloginstatus.ajax", function (req, res, next) {
   });
 });
 
-router.post("/login.ajax", function (req, res) {
+router.post("/login.ajax", validateInput([validationRules.password]), function (req, res) {
   console.log("req.pool is", !!req.pool);
   var username = req.body.username;
   var password = req.body.password;
@@ -202,7 +222,7 @@ router.post("/varify_forget.ajax", function (req, res) {
   });
 });
 
-router.post("/ChangePass.ajax", function (req, res) {
+router.post("/ChangePass.ajax", validateInput([validationRules.password]), function (req, res) {
   var email = req.body.email;
   var password = req.body.new_password;
   console.log("req.pool is", !!req.pool);

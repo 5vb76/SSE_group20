@@ -58,6 +58,7 @@ var vueinst = new Vue({
           window.location.href = "/User_mainpage.html";
         } else {
           const data = JSON.parse(xhttp.responseText);
+          console.log(xhttp.responseText);
           alert("Login failed: " + data.message);
         }
       };
