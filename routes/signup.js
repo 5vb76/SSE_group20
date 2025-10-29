@@ -202,6 +202,7 @@ router.post(
         }
 
         // ok: update user & create covid status
+        var user_id = results[0].user_id;
         hashPassword(password).then((password_hash) => {
           const uquery =
             "UPDATE users SET name = ?, password_hash = ?, user_type = 'customer' WHERE email = ?";
@@ -220,7 +221,6 @@ router.post(
               const cquery =
                 "INSERT INTO users_covid_status (user_id, state_name) VALUES ((SELECT user_id FROM users WHERE email = ?), 'Green')";
               connection.query(cquery, [email], function (error) {
-                connection.release();
                 if (error) {
                   console.log(error);
                   return res.status(504).json({
@@ -228,9 +228,20 @@ router.post(
                     message: "Database insert error.",
                   });
                 }
-                return res
-                  .status(200)
-                  .json({ success: true, message: "Registration successful." });
+                const query = "INSERT INTO user_address (user_id, address, city, state, postcode) VALUES (?, ?, ?, ?, ?)"
+                connection.query(query, [user_id, 'default', 'default', 'default', 'default'], function (error) {
+                  if (error) {
+                    console.log(error);
+                    return res.status(505).json({
+                      success: false,
+                      message: "Database insert error.",
+                    });
+                  }
+                  connection.release();
+                  return res
+                    .status(200)
+                    .json({ success: true, message: "Registration successful." });
+                });
               });
             }
           );

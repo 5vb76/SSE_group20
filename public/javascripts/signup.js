@@ -91,6 +91,7 @@ var vueinst = new Vue({
           } else {
             // Handle all error status codes
             try {
+              console.log(xhttp.responseText);
               const data = JSON.parse(xhttp.responseText);
               alert("Registration failed: " + data.message);
             } catch (e) {
