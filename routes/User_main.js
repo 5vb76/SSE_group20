@@ -4,17 +4,37 @@ var router = express.Router();
 
 const crypto = require("crypto");
 
-function sha256(text) {
-  return crypto.createHash("sha256").update(text).digest("hex");
-}
+const {
+  hashPassword,
+  comparePassword,
+  sha256,
+  generateVerificationCode,
+  hashToken,
+} = require("../utils/crypto");
+const {
+  validateInput,
+  validationRules,
+  requireRole,
+} = require("../middleware/security");
 
-function generateResetCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-}
+// Use secure verification code generator
+const generateResetCode = () => generateVerificationCode(6);
 
+// Enhanced password validation
 function validatePassword(password) {
-  //todo: varify new password see if it matches the criteria
-  return true;
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return (
+    password.length >= minLength &&
+    hasUpperCase &&
+    hasLowerCase &&
+    hasNumbers &&
+    hasSpecialChar
+  );
 }
 
 router.get("/", function (req, res, next) {
@@ -497,7 +517,7 @@ router.get("/getemailcode", function (req, res) {
   });
 });
 
-router.post("/password_change", function (req, res) {
+router.post("/password_change", validateInput([validationRules.password]), function (req, res) {
   if (!req.session.isLoggedIn) {
     return res.status(401).json({ success: false, message: "Not logged in." });
   }

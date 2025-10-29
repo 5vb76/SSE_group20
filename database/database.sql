@@ -217,7 +217,7 @@ INSERT INTO users (name, user_type, email, password_hash)
 VALUES
 ('Alice', 'customer', 'alice@example.com', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'), -- 123456
 ('Bob', 'customer', 'bob@example.com', '481f6cc0511143ccdd7e2d1b1b94faf0a700a8b49cd13922a70b5ae28acaa8c5'), -- 654321
-('Dahao', 'customer', 'dahaomailp1@gmail.com', '91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203'), -- 000000
+('Dahao', 'customer', 'dahaomailp1@gmail.com', 'b2243c1fee3ff483edba6e8dd049b46674ee5beca80ef5ba4a3e72f1dd2c5102'), -- 123456qQ
 ('admin', 'admin', 'admin@example.com', '94edf28c6d6da38fd35d7ad53e485307f89fbeaf120485c8d17a43f323deee71'); -- 666666
 
 INSERT INTO provider (name, email, password_hash, description)
