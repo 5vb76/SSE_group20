@@ -114,24 +114,6 @@
 
       <!-- main area -->
       <main class="main">
-        <!-- top title -->
-        <header class="topbar">
-          <div class="site-title">GOGO Delivery</div>
-          <div class="top-actions">
-            <input
-              class="search"
-              type="text"
-              placeholder="Search for Restaurant...."
-              v-model="search_query"
-              @input="filterProviders()"
-            />
-            <button class="btn" @click="Search()">Search</button>
-            <button class="btn" @click="clearSearch()" v-if="search_query">
-              Clear
-            </button>
-          </div>
-        </header>
-
         <!-- provider list -->
         <section class="merchant-grid" v-if="mode ==='shops'">
           <article

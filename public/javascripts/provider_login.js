@@ -29,11 +29,17 @@ var vueinst = new Vue({
       var ptr = this;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
+        if (this.status == 429) {
+          alert("Too many login attempts. Please try again later.");
+          return;
+        }
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(xhttp.responseText);
           window.location.href = "/provider_mainpage.html";
-        } else if (this.readyState == 4 && this.status == 401) {
+        }
+        else {
           const data = JSON.parse(xhttp.responseText);
+          console.log(xhttp.responseText);
           alert("Login failed: " + data.message);
         }
       };

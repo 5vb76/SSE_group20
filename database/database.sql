@@ -222,7 +222,7 @@ VALUES
 
 INSERT INTO provider (name, email, password_hash, description)
 VALUES
-('P1 Fruit Store', 'P1@example.com', '91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203', 'All Amazing Fruit is avaliable here!'), -- 000000
+('P1 Fruit Store', 'P1@example.com', 'b2243c1fee3ff483edba6e8dd049b46674ee5beca80ef5ba4a3e72f1dd2c5102', 'All Amazing Fruit is avaliable here!'), -- 123456qQ
 ('Lilliam Cafe', 'P2@example.com', '91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203', 'Premium pour-over and cold brew coffee, paired with freshly baked croissants, bagels and desserts.'), -- 000000'
 ('Spice Route Sichuan','P3@example.com', '91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203', 'Authentic Sichuan flavors with customizable spice levels.'), -- 000000
 ('Nebula Burgers', 'P4@example.com', '91b4d142823f7d20c5f08df69122de43f35f057a988d9619f6d3138485c9a203', 'Smash burgers, fresh veggies, house-made sauces.'),        -- 000000
