@@ -232,25 +232,34 @@ var vueinst = new Vue({
       this.mode = "covid_report";
       this.getUserInfo();
     },
-    search(){
-        var ptr = this;
-        if(!this.search_query){
-            alert("Search query cannot be empty.");
-            return;
+    search() {
+      var ptr = this;
+      const rawQuery = (ptr.search_query || "").trim();
+      if (!rawQuery) {
+        alert("Search query cannot be empty.");
+        return;
+      }
+      const query = rawQuery.toLowerCase();
+      ptr.provider_search = ptr.provider.map(function (prov) {
+        const nameMatch =
+          typeof prov.name === "string" &&
+          prov.name.toLowerCase().includes(query);
+        const descMatch =
+          typeof prov.description === "string" &&
+          prov.description.toLowerCase().includes(query);
+        let productMatch = false;
+        if (prov.items && Array.isArray(prov.items)) {
+          productMatch = prov.items.some(function (item) {
+            return (
+              typeof item.name === "string" &&
+              item.name.toLowerCase().includes(query)
+            );
+          });
         }
-        ptr.provider_search = ptr.provider.map(function (prov) {
-            let found = false;
-            if (prov.items && Array.isArray(prov.items)) {
-                found = prov.items.some(function (item) {
-                    return (
-                        typeof item.name === "string" &&
-                        item.name.toLowerCase().includes(ptr.search_query.toLowerCase())
-                    );
-                });
-            }
-            return { ...prov, found };
-        });
-        console.log(ptr.provider_search);
+        return { ...prov, found: nameMatch || descMatch || productMatch };
+      });
+      this.filterProviders();
+      console.log(ptr.provider_search);
     },
     gohome() {
       this.mode = "shops";
@@ -268,9 +277,9 @@ var vueinst = new Vue({
       this.mode = "history";
       this.get_user_history();
     },
-    gosearch(){
-        this.mode = "search";
-        this.search();
+    gosearch() {
+      this.mode = "search";
+      this.search();
     },
     check_usercovid_status() {
       var ptr = this;
@@ -414,7 +423,47 @@ var vueinst = new Vue({
       xhttp.send();
     },
     reportOrder(service_id) {
-      alert("Report function is not implemented yet.");
+      var ptr = this;
+      const reason = prompt(
+        "Please describe the issue with this order:",
+        ""
+      );
+      if (reason === null) return;
+      if (!reason || reason.trim().length < 5) {
+        alert("Please provide at least 5 characters describing the issue.");
+        return;
+      }
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState !== 4) return;
+        if (this.status === 200 || this.status === 201) {
+          try {
+            const data = JSON.parse(xhttp.responseText);
+            alert(data.message || "Report submitted successfully.");
+          } catch (e) {
+            alert("Report submitted successfully.");
+          }
+          ptr.get_user_history();
+          return;
+        }
+        try {
+          const data = JSON.parse(xhttp.responseText);
+          alert(
+            data.message ||
+              "Failed to submit report. Please try again later."
+          );
+        } catch (e) {
+          alert("Failed to submit report. Please try again later.");
+        }
+      };
+      xhttp.open("POST", "/User_main/report_order", true);
+      xhttp.setRequestHeader("Content-type", "application/json");
+      xhttp.send(
+        JSON.stringify({
+          service_id: service_id,
+          reason: reason.trim(),
+        })
+      );
     },
     // Determine if item is out of stock
     isOOS(item) {
@@ -485,7 +534,7 @@ var vueinst = new Vue({
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(xhttp.responseText);
           ptr.user_created_at = data.user.created_at;
-          ptr.user_address = data.address;
+          ptr.user_address = Array.isArray(data.address) ? data.address : [];
           ptr.username = data.user.name;
           ptr.check_usercovid_status();
           ptr.user_type = data.user.user_type;
@@ -519,28 +568,38 @@ var vueinst = new Vue({
       xhttp.send();
     },
     Search() {
-      // execute search filter
       this.filterProviders();
     },
     filterProviders() {
-      if (!this.search_query) {
-        // if search box is empty, show all provider
+      const query = (this.search_query || "").trim().toLowerCase();
+      if (!query) {
         this.filtered_provider = this.provider;
-      } else {
-        // filter provider by search keyword
-        this.filtered_provider = this.provider.filter(
-          function (provider) {
-            return (
-              provider.name.toLowerCase().includes(this.search_query) ||
-              (provider.description &&
-                provider.description.toLowerCase().includes(this.search_query))
-            );
-          }.bind(this)
-        );
+        return;
       }
+      this.filtered_provider = this.provider.filter(
+        function (provider) {
+          const nameMatch =
+            typeof provider.name === "string" &&
+            provider.name.toLowerCase().includes(query);
+          const descMatch =
+            typeof provider.description === "string" &&
+            provider.description.toLowerCase().includes(query);
+          let productMatch = false;
+          if (provider.items && Array.isArray(provider.items)) {
+            productMatch = provider.items.some(function (item) {
+              return (
+                typeof item.name === "string" &&
+                item.name.toLowerCase().includes(query)
+              );
+            });
+          }
+          return nameMatch || descMatch || productMatch;
+        }.bind(this)
+      );
     },
     clearSearch() {
       this.search_query = "";
+      this.mode = "shops";
       this.filterProviders();
     },
     isBlocked: function (status) {

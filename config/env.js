@@ -28,7 +28,7 @@ module.exports = {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS) || 12,
     rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
     rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    emailRateLimitMax: parseInt(process.env.EMAIL_RATE_LIMIT_MAX) || 5,
+    emailRateLimitMax: parseInt(process.env.EMAIL_RATE_LIMIT_MAX) || 15,
     emailRateLimitWindowMs:
       parseInt(process.env.EMAIL_RATE_LIMIT_WINDOW_MS) || 300000, // 5 minutes
   },

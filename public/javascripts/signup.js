@@ -104,8 +104,11 @@ var vueinst = new Vue({
       xhttp.send(
         JSON.stringify({
           user_name: this.user_name,
+          username: this.user_name,
           user_email: this.user_email,
+          email: this.user_email,
           user_password: this.user_password,
+          password: this.user_password,
           varifyEmailCode: this.varifyEmailCode,
         })
       );
@@ -134,29 +137,51 @@ var vueinst = new Vue({
       var ptr = this;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
+        if (this.readyState !== 4) return;
+        if (this.status === 200) {
           const data = JSON.parse(xhttp.responseText);
           alert("registed successful: " + data.message);
           ptr.mode = "whosignup";
           window.location.href = "/provider_login.html";
-        } else if (this.readyState == 4 && this.status == 401) {
-          const data = JSON.parse(xhttp.responseText);
-          alert("registed fail " + data.message);
+          return;
         }
+        let message = "Registration failed.";
+        try {
+          const data = JSON.parse(xhttp.responseText);
+          if (this.status === 400 && Array.isArray(data.errors)) {
+            message =
+              "Validation failed: " +
+              data.errors
+                .map((err) => err.msg || err.param)
+                .filter(Boolean)
+                .join("; ");
+          } else if (data.message) {
+            message = data.message;
+          }
+        } catch (e) {
+          // keep default message
+        }
+        alert(message);
       };
       xhttp.open("POST", "/signup/Pregister.ajax", true);
       xhttp.setRequestHeader("Content-type", "application/json");
       xhttp.send(
         JSON.stringify({
           provider_name: this.provider_name,
+          business_name: this.provider_name,
           provider_email: this.provider_email,
+          email: this.provider_email,
           provider_password: this.provider_password,
-          provider_address: this.provider_address,
+          password: this.provider_password,
           provider_varifyEmailCode: this.provider_varifyEmailCode,
           provider_address: this.provider_address,
+          address: this.provider_address,
           provider_city: this.provider_city,
+          city: this.provider_city,
           provider_state: this.provider_state,
+          state: this.provider_state,
           provider_postcode: this.provider_postcode,
+          postcode: this.provider_postcode,
         })
       );
     },

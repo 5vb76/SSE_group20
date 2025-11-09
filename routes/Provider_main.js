@@ -311,6 +311,54 @@ router.post("/description_change", function (req, res) {
   });
 });
 
+router.post("/add_address", function (req, res) {
+  if (!requireProviderSession(req, res)) return;
+  const { address, city, state, postcode } = req.body || {};
+  if (!address || !city || !state || !postcode) {
+    return res.status(400).json({
+      success: false,
+      message: "All address fields are required.",
+    });
+  }
+  const email = req.session.username;
+  req.pool.getConnection(async function (error, connection) {
+    if (error) {
+      console.log(error);
+      return res.sendStatus(500);
+    }
+    try {
+      const provider = await getProviderByEmail(connection, email);
+      if (!provider) {
+        connection.release();
+        return res
+          .status(404)
+          .json({ success: false, message: "Provider not found." });
+      }
+      const insertSql =
+        "INSERT INTO provider_address (provider_id, address, city, state, postcode) VALUES (?, ?, ?, ?, ?)";
+      connection.query(
+        insertSql,
+        [provider.user_id, address, city, state, postcode],
+        function (err) {
+          connection.release();
+          if (err) {
+            console.log(err);
+            return res.sendStatus(500);
+          }
+          return res.status(200).json({
+            success: true,
+            message: "Address added successfully.",
+          });
+        }
+      );
+    } catch (e) {
+      connection.release();
+      console.log(e);
+      return res.sendStatus(500);
+    }
+  });
+});
+
 router.get("/getemailcode", function (req, res) {
   if (!requireProviderSession(req, res)) return;
   const email = req.session.username;

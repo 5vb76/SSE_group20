@@ -103,9 +103,7 @@ const validationRules = {
 
   businessName: body("business_name")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Business name must be between 2 and 100 characters")
-    .matches(/^[a-zA-Z0-9\s\-&.,]+$/)
-    .withMessage("Business name contains invalid characters"),
+    .withMessage("Business name must be between 2 and 100 characters"),
 
   description: body("description")
     .isLength({ max: 500 })
@@ -117,21 +115,15 @@ const validationRules = {
 
   city: body("city")
     .isLength({ min: 2, max: 100 })
-    .withMessage("City must be between 2 and 100 characters")
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage("City can only contain letters and spaces"),
+    .withMessage("City must be between 2 and 100 characters"),
 
   state: body("state")
     .isLength({ min: 2, max: 50 })
-    .withMessage("State must be between 2 and 50 characters")
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage("State can only contain letters and spaces"),
+    .withMessage("State must be between 2 and 50 characters"),
 
   postcode: body("postcode")
     .isLength({ min: 4, max: 10 })
-    .withMessage("Postcode must be between 4 and 10 characters")
-    .matches(/^[a-zA-Z0-9\s]+$/)
-    .withMessage("Postcode contains invalid characters"),
+    .withMessage("Postcode must be between 4 and 10 characters"),
 
   covidStatus: body("state_name")
     .isIn(["Green", "Yellow", "Red"])

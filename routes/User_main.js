@@ -641,6 +641,127 @@ router.get("/get_user_history", function (req, res) {
   });
 });
 
+router.post("/report_order", function (req, res) {
+  if (!req.session.isLoggedIn) {
+    return res.status(401).json({ success: false, message: "Not logged in." });
+  }
+
+  const userId = req.session.user.id;
+  const serviceId = Number(req.body.service_id);
+  const reason = (req.body.reason || "").trim();
+
+  if (!serviceId || Number.isNaN(serviceId)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid order identifier." });
+  }
+  if (!reason || reason.length < 5) {
+    return res.status(400).json({
+      success: false,
+      message: "Reason must be at least 5 characters long.",
+    });
+  }
+
+  req.pool.getConnection(function (error, connection) {
+    if (error) {
+      console.log(error);
+      return res.sendStatus(500);
+    }
+
+    const orderSql =
+      "SELECT service_id, provider_id FROM delivery_service WHERE service_id = ? AND customer_id = ?";
+    connection.query(orderSql, [serviceId, userId], function (err, orders) {
+      if (err) {
+        connection.release();
+        console.log(err);
+        return res.sendStatus(500);
+      }
+      if (!orders || orders.length === 0) {
+        connection.release();
+        return res.status(404).json({
+          success: false,
+          message: "Order not found.",
+        });
+      }
+
+      const providerId = orders[0].provider_id;
+      const ensureTableSql = `
+            CREATE TABLE IF NOT EXISTS order_reports (
+              id BIGINT NOT NULL AUTO_INCREMENT,
+              service_id BIGINT NOT NULL,
+              customer_id BIGINT NOT NULL,
+              provider_id BIGINT NOT NULL,
+              reason TEXT NOT NULL,
+              status ENUM('pending','resolved') NOT NULL DEFAULT 'pending',
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (id),
+              KEY idx_order_reports_service (service_id),
+              KEY idx_order_reports_customer (customer_id),
+              KEY idx_order_reports_provider (provider_id),
+              CONSTRAINT fk_order_reports_service
+                FOREIGN KEY (service_id)
+                REFERENCES delivery_service (service_id)
+                ON DELETE CASCADE,
+              CONSTRAINT fk_order_reports_customer
+                FOREIGN KEY (customer_id)
+                REFERENCES users (user_id)
+                ON DELETE CASCADE,
+              CONSTRAINT fk_order_reports_provider
+                FOREIGN KEY (provider_id)
+                REFERENCES provider (user_id)
+                ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+          `;
+
+      connection.query(ensureTableSql, function (err) {
+        if (err) {
+          connection.release();
+          console.log(err);
+          return res.sendStatus(500);
+        }
+
+        const checkSql =
+          "SELECT id, status FROM order_reports WHERE service_id = ? AND customer_id = ? ORDER BY id DESC LIMIT 1";
+        connection.query(checkSql, [serviceId, userId], function (err, rows) {
+          if (err) {
+            connection.release();
+            console.log(err);
+            return res.sendStatus(500);
+          }
+          if (rows && rows.length > 0 && rows[0].status === "pending") {
+            connection.release();
+            return res.status(409).json({
+              success: false,
+              message:
+                "You have already reported this order. Our team is reviewing it.",
+            });
+          }
+
+          const insertSql =
+            "INSERT INTO order_reports (service_id, customer_id, provider_id, reason) VALUES (?, ?, ?, ?)";
+          connection.query(
+            insertSql,
+            [serviceId, userId, providerId, reason],
+            function (err) {
+              connection.release();
+              if (err) {
+                console.log(err);
+                return res.sendStatus(500);
+              }
+
+              return res.status(201).json({
+                success: true,
+                message:
+                  "Order report submitted successfully. We will review it shortly.",
+              });
+            }
+          );
+        });
+      });
+    });
+  });
+});
+
 router.post("/add_address", function (req, res) {
   if (!req.session.isLoggedIn) {
     return res.status(401).json({ success: false, message: "Not logged in." });
