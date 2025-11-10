@@ -20,12 +20,15 @@ var vueinst = new Vue({
       var ptr = this;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
+        if (this.readyState !== 4) return;
+        if (this.status === 200) {
           const data = JSON.parse(xhttp.responseText);
           if (data.success === true) {
             console.log("User is logged in");
             window.location.href = "/User_mainpage.html";
           }
+        } else if (this.status === 401) {
+          console.log("No active session; staying on login page.");
         }
       };
       xhttp.open("GET", "/login/checkloginstatus.ajax", true);

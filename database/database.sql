@@ -1,5 +1,6 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS order_reports;
 DROP TABLE IF EXISTS delivery_service;
 DROP TABLE IF EXISTS provider;
 DROP TABLE IF EXISTS providers_covid_status;
@@ -211,6 +212,34 @@ CREATE TABLE order_items (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE order_reports (
+  id           BIGINT NOT NULL AUTO_INCREMENT,
+  service_id   BIGINT NOT NULL,
+  customer_id  BIGINT NOT NULL,
+  provider_id  BIGINT NOT NULL,
+  reason       TEXT   NOT NULL,
+  status       ENUM('pending','resolved') NOT NULL DEFAULT 'pending',
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+
+  KEY idx_order_reports_service  (service_id),
+  KEY idx_order_reports_customer (customer_id),
+  KEY idx_order_reports_provider (provider_id),
+
+  CONSTRAINT fk_order_reports_service
+    FOREIGN KEY (service_id)
+    REFERENCES delivery_service (service_id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_order_reports_customer
+    FOREIGN KEY (customer_id)
+    REFERENCES users (user_id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_order_reports_provider
+    FOREIGN KEY (provider_id)
+    REFERENCES provider (user_id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 -- 插入初始数据
 INSERT INTO users (name, user_type, email, password_hash)
@@ -321,4 +350,3 @@ VALUES
 (5, 5, 1),
 (5, 6, 1),
 (5, 7, 1);
-

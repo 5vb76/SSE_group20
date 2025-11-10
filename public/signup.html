@@ -99,8 +99,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-pwd"
                 aria-label="Display Password"
                 v-on:click="show()"
               >
@@ -122,8 +121,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-pwd"
                 aria-label="Display Password"
                 v-on:click="cshow()"
               >
@@ -143,8 +141,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-code"
                 v-on:click="c_email_varify()"
               >
                 Get Code
@@ -214,8 +211,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-pwd"
                 aria-label="Display Password"
                 v-on:click="show()"
               >
@@ -237,8 +233,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-pwd"
                 aria-label="Display Password"
                 v-on:click="cshow()"
               >
@@ -247,7 +242,7 @@
             </div>
           </div>
           <div class="field">
-            <label class="label" for="address">Address</label>
+            <label class="label" for="provider_address">Address</label>
             <div class="input-wrap">
               <input
                 id="provider_address"
@@ -259,11 +254,11 @@
             </div>
           </div>
           <div class="field">
-            <label class="label" for="address">City</label>
+            <label class="label" for="provider_city">City</label>
             <div class="input-wrap">
               <input
-                id="provider_address"
-                name="provider_address"
+                id="provider_city"
+                name="provider_city"
                 type="text"
                 v-model="provider_city"
                 placeholder="e.g. Adelaide"
@@ -271,11 +266,11 @@
             </div>
           </div>
           <div class="field">
-            <label class="label" for="address">State</label>
+            <label class="label" for="provider_state">State</label>
             <div class="input-wrap">
               <input
-                id="provider_address"
-                name="provider_address"
+                id="provider_state"
+                name="provider_state"
                 type="text"
                 v-model="provider_state"
                 placeholder="e.g. SA"
@@ -283,11 +278,11 @@
             </div>
           </div>
           <div class="field">
-            <label class="label" for="address">Post Code</label>
+            <label class="label" for="provider_postcode">Post Code</label>
             <div class="input-wrap">
               <input
-                id="provider_address"
-                name="provider_address"
+                id="provider_postcode"
+                name="provider_postcode"
                 type="text"
                 v-model="provider_postcode"
                 placeholder="e.g. 5000"
@@ -306,8 +301,7 @@
               />
               <button
                 type="button"
-                id="togglePwd"
-                class="toggle"
+                class="toggle toggle-code"
                 v-on:click="p_email_varify()"
               >
                 Get Code

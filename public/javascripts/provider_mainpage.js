@@ -1,4 +1,5 @@
 const API_PREFIXES_LOGIN = ["/plogin", "/Plogin"];
+const API_PREFIXES_PROVIDER = ["/Provider_main", "/provider_main"];
 
 /** try each candidate URL, return JSON; only 200 is considered successful, 401 throws an explicit error */
 async function tryFetchJSON(method, urlCandidates, payload) {
@@ -69,10 +70,17 @@ var vueinst = new Vue({
       business_name: false,
       description: false,
       password: false,
+      address: false,
     },
     form: {
       business_name: "",
       description: "",
+    },
+    address_form: {
+      address: "",
+      city: "",
+      state: "",
+      postcode: "",
     },
     reset_pass: {
       password: "",
@@ -433,6 +441,13 @@ var vueinst = new Vue({
         this.form.business_name = this.provider_name;
       } else if (field === "description") {
         this.form.description = this.provider_description;
+      } else if (field === "address") {
+        this.address_form = {
+          address: "",
+          city: "",
+          state: "",
+          postcode: "",
+        };
       }
     },
 
@@ -447,6 +462,29 @@ var vueinst = new Vue({
         await this.getProviderInfo();
       } catch (e) {
         alert("Failed to update business name");
+      }
+    },
+
+    async add_address() {
+      const { address, city, state, postcode } = this.address_form;
+      if (!address || !city || !state || !postcode) {
+        alert("All address fields are required.");
+        return;
+      }
+      try {
+        const data = await apiPOST("/add_address", {
+          address,
+          city,
+          state,
+          postcode,
+        });
+        console.log("Address added:", data && data.message);
+        this.editing.address = false;
+        this.address_form = { address: "", city: "", state: "", postcode: "" };
+        await this.getProviderInfo();
+      } catch (e) {
+        console.warn("add_address failed:", e && e.status);
+        alert("Failed to add address. Please try again.");
       }
     },
 

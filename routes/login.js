@@ -79,51 +79,65 @@ router.post("/login.ajax", validateInput([validationRules.password]), function (
     connection.query(query, username, function (error, results) {
       //connection.release();
       if (!results || results.length == 0) {
+        connection.release();
         return res
           .status(401)
           .json({ success: false, message: "Invalid username or password." });
       }
       const password_hash = results[0].password_hash;
-      if (sha256(password) == password_hash) {
-        const covid_query =
-          "SELECT state_name FROM users_covid_status WHERE user_id = ? ORDER BY id DESC LIMIT 1;";
-        connection.query(
-          covid_query,
-          results[0].user_id,
-          function (error, covid_results) {
-            connection.release();
-            if (error) {
-              console.log(error);
-              return res.sendStatus(500);
-            }
+      const isBcryptHash = typeof password_hash === "string" && password_hash.startsWith("$2");
+      const verifyPassword = isBcryptHash
+        ? comparePassword(password, password_hash)
+        : Promise.resolve(sha256(password) === password_hash);
 
-            req.session.user = {
-              id: results[0].user_id,
-              name: results[0].name,
-              email: results[0].email,
-              user_type: results[0].user_type,
-              covid_status: covid_results[0].state_name,
-            };
-            req.session.isLoggedIn = true;
-            if (remember) {
-              req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-            } else {
-              req.session.cookie.maxAge = 1 * 60 * 60 * 1000; // 1 hour
-            }
-            return res.status(200).json({
-              success: true,
-              message: "Login successful.",
-              user: req.session.user,
+      verifyPassword
+        .then((isMatch) => {
+          if (!isMatch) {
+            connection.release();
+            return res.status(401).json({
+              success: false,
+              message: "Invalid username or password.",
             });
           }
-        );
-      } else {
-        connection.release();
-        // Passwords don't match
-        return res
-          .status(401)
-          .json({ success: false, message: "Invalid username or password." });
-      }
+
+          const covid_query =
+            "SELECT state_name FROM users_covid_status WHERE user_id = ? ORDER BY id DESC LIMIT 1;";
+          connection.query(
+            covid_query,
+            results[0].user_id,
+            function (error, covid_results) {
+              connection.release();
+              if (error) {
+                console.log(error);
+                return res.sendStatus(500);
+              }
+
+              req.session.user = {
+                id: results[0].user_id,
+                name: results[0].name,
+                email: results[0].email,
+                user_type: results[0].user_type,
+                covid_status: covid_results[0].state_name,
+              };
+              req.session.isLoggedIn = true;
+              if (remember) {
+                req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+              } else {
+                req.session.cookie.maxAge = 1 * 60 * 60 * 1000; // 1 hour
+              }
+              return res.status(200).json({
+                success: true,
+                message: "Login successful.",
+                user: req.session.user,
+              });
+            }
+          );
+        })
+        .catch((compareError) => {
+          connection.release();
+          console.log(compareError);
+          return res.sendStatus(500);
+        });
     });
   });
 });

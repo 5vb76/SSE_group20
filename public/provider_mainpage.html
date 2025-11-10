@@ -431,6 +431,116 @@
             </div>
           </div>
 
+          <!-- Manage business address -->
+          <div class="menu-item status-row">
+            <span>Business Address</span>
+            <div style="display: flex; width: 100%; justify-content: flex-end">
+              <template v-if="!editing.address">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    justify-content: flex-end;
+                    width: 100%;
+                  "
+                >
+                  <div
+                    class="status"
+                    style="
+                      text-align: right;
+                      max-width: 60%;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 4px;
+                      align-items: flex-end;
+                    "
+                  >
+                    <template v-if="provider_address.length === 0">
+                      No address available.
+                    </template>
+                    <ul
+                      v-else
+                      style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                        text-align: right;
+                      "
+                    >
+                      <li
+                        v-for="(addr, index) in provider_address"
+                        :key="index"
+                      >
+                        {{ addr.address }}, {{ addr.city }}, {{ addr.state }},
+                        {{ addr.postcode }}
+                      </li>
+                    </ul>
+                  </div>
+                  <button class="btn btn-ghost" @click="toggleEdit('address')">
+                    Add Address
+                  </button>
+                </div>
+              </template>
+              <template v-else>
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: 8px;
+                    width: 100%;
+                  "
+                >
+                  <input
+                    class="inline-input"
+                    type="text"
+                    v-model.trim="address_form.address"
+                    placeholder="e.g. 1 Apple Road"
+                    style="max-width: 320px"
+                  />
+                  <div
+                    style="
+                      display: flex;
+                      gap: 8px;
+                      flex-wrap: wrap;
+                      justify-content: flex-end;
+                      width: 100%;
+                    "
+                  >
+                    <input
+                      class="inline-input"
+                      type="text"
+                      v-model.trim="address_form.city"
+                      placeholder="City"
+                      style="max-width: 200px"
+                    />
+                    <input
+                      class="inline-input"
+                      type="text"
+                      v-model.trim="address_form.state"
+                      placeholder="State"
+                      style="max-width: 160px"
+                    />
+                    <input
+                      class="inline-input"
+                      type="text"
+                      v-model.trim="address_form.postcode"
+                      placeholder="Postcode"
+                      style="max-width: 140px"
+                    />
+                  </div>
+                  <div style="display: flex; gap: 8px">
+                    <button class="btn btn-ghost" @click="toggleEdit('address')">
+                      Cancel
+                    </button>
+                    <button class="btn" @click="add_address()">Submit</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
           <!-- Edit password -->
           <div class="menu-item status-row">
             <h4>Password</h4>
